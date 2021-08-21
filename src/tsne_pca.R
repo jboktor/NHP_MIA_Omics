@@ -77,7 +77,7 @@ allMet <-
 
 # Make data frame Numeric
 df <- allMet %>% 
-  as.data.framez() %>% 
+  as.data.frame() %>% 
   select(-tissue) %>%
   mutate_if(is.character, as.numeric) %>%
   as.matrix()
@@ -90,7 +90,7 @@ df <- allMet %>%
 set.seed(42)
 tsne_out <- Rtsne(df, dims = 2, perplexity=30, verbose=TRUE, max_iter = 500)
 exeTimeTsne<- system.time(Rtsne(df, dims = 2, perplexity=30, verbose=TRUE, max_iter = 500))
-df.tsne_plot <- data.frame(x = tsne_out$Y[,1], y = tsne_out$Y[,2], col = tissue)
+df.tsne_plot <- data.frame(x = tsne_out$Y[,1], y = tsne_out$Y[,2], col = allMet$tissue)
 
 tsne <-
   df.tsne_plot %>%
@@ -102,7 +102,7 @@ tsne <-
 tsne
 
 ggsave(tsne, filename = "figures/ordination/tSNE_all_tissues.svg", 
-       width = 5, height = 4)
+       width = 4, height = 3)
 
 #____________________________________________
 #                   PCA             ----
@@ -116,10 +116,12 @@ df_out$donor <- sapply(strsplit(as.character(row.names(df)), "_"), "[[", 1 )
 pca.plot <-
   pca$x %>%
   as.data.frame() %>%
-  ggplot(aes(x = PC1, y = PC2, color = group)) +
+  ggplot(aes(x = PC1, y = PC2, color = allMet$tissue)) +
   geom_point() +
   scale_color_manual("", values = tissue_colors) +
   theme_classic()
 pca.plot
 
+ggsave(pca.plot, filename = "figures/ordination/PCA_all_tissues.svg",
+       width = 4, height = 3)
   
