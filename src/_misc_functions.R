@@ -45,9 +45,10 @@ super_pathways_alphetical <-
     "Xenobiotics"
   )
 
-super_pathway_cols <- pal_futurama()(9)
-names(super_pathway_cols) <- super_pathways_alphetical
-
+super_pathway_cols<- brewer.pal(9, "RdYlBu")
+names(super_pathway_cols2) <- super_pathways_alphetical
+super_pathway_cols2 <- pal_futurama()(9)
+names(super_pathway_cols2) <- super_pathways_alphetical
 
 # Plotting Labels & Colors
 group_ord <- c("Poly(I:C) Male",
@@ -477,7 +478,7 @@ corr_heatmap_facet_v2 <- function(corr.df,
   feature_B.dendro <- 
     as.dendrogram(hclust(d = dist(x = as.data.frame(t(rho.df))), method = "complete"))
   feature_B.dendro.plot <- ggdendrogram(data = feature_B.dendro, rotate = TRUE)
-  
+
   ### Reorder Heatmap axis using order of dendrograms
   feature_B.order <- order.dendrogram(feature_B.dendro)
   feature_A.order <- order.dendrogram(feature_A.dendro)
@@ -698,11 +699,11 @@ corr_heatmap_FDRv2_plasma <- function(df){
 
 corr_heatmap_FDRv3_behavior <- function(df){
   df %>% 
-    group_by(feature_A) %>%
-    mutate(q = p.adjust(p, method = 'BH')) %>%
-    ungroup() %>% 
     separate(feature_A, c("feature_A_obj", "timepoint"), sep = "__", remove = F) %>% 
-    separate(feature_B, c("feature_B_obj", "tissue_B"), sep = "__", remove = F)
+    separate(feature_B, c("feature_B_obj", "tissue_B"), sep = "__", remove = F) %>% 
+    group_by(feature_A, tissue_B) %>%
+    mutate(q = p.adjust(p, method = 'BH')) %>%
+    ungroup()
 }
 
 
