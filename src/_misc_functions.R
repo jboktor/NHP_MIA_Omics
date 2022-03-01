@@ -46,7 +46,7 @@ super_pathways_alphetical <-
   )
 
 super_pathway_cols<- brewer.pal(9, "RdYlBu")
-names(super_pathway_cols2) <- super_pathways_alphetical
+names(super_pathway_cols) <- super_pathways_alphetical
 super_pathway_cols2 <- pal_futurama()(9)
 names(super_pathway_cols2) <- super_pathways_alphetical
 
@@ -333,14 +333,13 @@ corr_loop_parallel <- function(dfA, dfB, obj.name) {
 
   #setup parallel backend to use many processors
   cores = detectCores()
-  cl <- makeCluster(cores[1] - 2) #not to overload your computer
+  cl <- makeCluster(cores[1] - 1) 
   registerDoParallel(cl)
 
   corr_output <- tibble()
   loop <-
     foreach(metavar = colnames(dfA), .combine='rbind') %:%
     foreach(feature = colnames(dfB), .combine='rbind') %dopar% {
-      # cat("Calculating correlations for: ", metavar[[1]], "\n")
 
     # Calculate Spearman's Correlation
     spearman <-
@@ -360,15 +359,8 @@ corr_loop_parallel <- function(dfA, dfB, obj.name) {
       "n" = length(na.omit(dfA[[metavar]])),
       "p" = spearman$p.value[[1]]
     )
-    # corr_output <- rbind(corCr_output, row2add)
   }
   stopCluster(cl)
-  # statvars <- c("rho", "S", "n", "p")
-  # corr_output <-
-  #   corr_output %>%
-  #   na.omit() %>%
-  #   mutate(across(all_of(statvars), as.character),
-  #          across(all_of(statvars), as.numeric))
   return(loop)
 }
 
@@ -383,9 +375,7 @@ corr_heatmap <- function(corr.df){
     dplyr::filter(p < 0.05) %>%
     dplyr::group_by(feature_B) %>%
     dplyr::summarise(n = n()) %>%
-    arrange(desc(n)) %>%
-    top_n(n = 30, wt = n) %>% 
-    slice_head(n = 30)
+    slice_max(n = 30, order_by = n, with_ties = F)
   
   # Filter correlation df for top 30 features
   corr.df.trim <- corr.df %>% 
@@ -444,84 +434,6 @@ corr_heatmap <- function(corr.df){
 
 
 #_______________________________________________________________________________
-
-
-corr_heatmap_facet_v2 <- function(corr.df, 
-                               facet_ord = c("Jejunum", "Ileum", "MLN", "Colon")){
-  
-  # Calculate number of significant (P-VALUE < 0.05) associations
-  #  and select top 30 features
-  corr.df.top <- corr.df %>% 
-    dplyr::filter(q < 0.2) %>%
-    dplyr::group_by(feature_B) %>%
-    dplyr::summarise(n = n()) %>%
-    arrange(desc(n)) %>%
-    top_n(n = 30, wt = n) %>% 
-    slice_head(n = 30)
-  
-  # Filter correlation df for top 30 features
-  corr.df.trim <- corr.df %>% 
-    mutate(feature_A = as.character(feature_A)) %>% 
-    filter(feature_B %in% corr.df.top$feature_B)
-  
-  # create dataframe matrix of Rho correlation values for distance functions
-  rho.df <- 
-    corr.df.trim %>% 
-    dplyr::select(feature_B, feature_A, rho) %>% 
-    pivot_wider(names_from = feature_B, values_from = rho, values_fill = NA) %>% 
-    column_to_rownames(var = "feature_A")
-  
-  # Hierarchical clustering of Rho values for features & feature_A
-  feature_A.dendro <- 
-    as.dendrogram(hclust(d = dist(x = rho.df), method = "complete"))
-  feature_A.dendro.plot <- ggdendrogram(data = feature_A.dendro, rotate = TRUE)
-  feature_B.dendro <- 
-    as.dendrogram(hclust(d = dist(x = as.data.frame(t(rho.df))), method = "complete"))
-  feature_B.dendro.plot <- ggdendrogram(data = feature_B.dendro, rotate = TRUE)
-
-  ### Reorder Heatmap axis using order of dendrograms
-  feature_B.order <- order.dendrogram(feature_B.dendro)
-  feature_A.order <- order.dendrogram(feature_A.dendro)
-  corr.df.trim.ordered <- corr.df.trim %>% 
-    dplyr::mutate(feature = factor(feature_B, 
-                                   ordered = TRUE,
-                                   levels = unique(corr.df.trim$feature_B)[feature_B.order] )) %>% 
-    dplyr::mutate(feature_A = factor(feature_A, 
-                                     ordered = TRUE,
-                                     levels = unique(corr.df.trim$feature_A)[feature_A.order] )) 
-  
-  ### Plot Heatmap
-  h1 <- 
-    corr.df.trim.ordered %>% 
-    mutate(siglabel = if_else(q < 0.20, "*", "")) %>%
-    mutate(tissue_A = factor(tissue_A, levels = facet_ord)) %>%
-    ggplot(aes(x = feature_A_obj, 
-               y = fct_relevel(feature_B, unique(corr.df.trim$feature_B)[feature_B.order]), 
-               fill = rho)) +
-    geom_tile() + 
-    geom_text(aes(label=siglabel), size=5 ,vjust = 0.77, color = "white") +
-    labs(fill = "Spearman's correlation") +
-    scale_y_discrete(position = "right") +
-    scale_fill_distiller(palette = "RdBu") +
-    # scale_fill_gradient2(low="#538cb8", high="#e21d1d",
-    #                      midpoint = 0, limit = c(-1,1), space = "lab") +
-    facet_grid(cols = vars(tissue_A), scales = "free_x", space = "free_x") +
-    # facet_grid(tissue_A_group~tissue_A, scales = "free", space = "free", drop = TRUE) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(angle=90, hjust =1),
-      legend.position = "top",
-      axis.title.x = element_blank(),
-      axis.title.y = element_blank(),
-      axis.ticks = element_blank(),
-      panel.background = element_blank(),
-      strip.background = element_rect(fill = "white"),
-      plot.margin = unit(c(1, 1, 1, 2), "cm")
-    )
-  
-  print(h1)
-  return(h1)
-}
 
 corr_heatmap_facet <- function(corr.df, 
                                facet_ord = c("Jejunum", "Ileum", "MLN", "Colon")){
@@ -598,6 +510,82 @@ corr_heatmap_facet <- function(corr.df,
   return(h1)
 }
 
+corr_heatmap_facet_v2 <- function(corr.df, 
+                                  facet_ord = c("Jejunum", "Ileum", "MLN", "Colon")){
+  
+  # Calculate number of significant (P-VALUE < 0.05) associations
+  #  and select top 30 features
+  corr.df.top <- corr.df %>% 
+    dplyr::filter(q < 0.2) %>%
+    dplyr::group_by(feature_B) %>%
+    dplyr::summarise(n = n()) %>%
+    slice_max(n = 30, order_by = n, with_ties = F)
+  
+  
+  # Filter correlation df for top 30 features
+  corr.df.trim <- corr.df %>% 
+    mutate(feature_A = as.character(feature_A)) %>% 
+    filter(feature_B %in% corr.df.top$feature_B)
+  
+  # create dataframe matrix of Rho correlation values for distance functions
+  rho.df <- 
+    corr.df.trim %>% 
+    dplyr::select(feature_B, feature_A, rho) %>% 
+    pivot_wider(names_from = feature_B, values_from = rho, values_fill = NA) %>% 
+    column_to_rownames(var = "feature_A")
+  
+  # Hierarchical clustering of Rho values for features & feature_A
+  feature_A.dendro <- 
+    as.dendrogram(hclust(d = dist(x = rho.df), method = "complete"))
+  feature_A.dendro.plot <- ggdendrogram(data = feature_A.dendro, rotate = TRUE)
+  feature_B.dendro <- 
+    as.dendrogram(hclust(d = dist(x = as.data.frame(t(rho.df))), method = "complete"))
+  feature_B.dendro.plot <- ggdendrogram(data = feature_B.dendro, rotate = TRUE)
+  
+  ### Reorder Heatmap axis using order of dendrograms
+  feature_B.order <- order.dendrogram(feature_B.dendro)
+  feature_A.order <- order.dendrogram(feature_A.dendro)
+  corr.df.trim.ordered <- corr.df.trim %>% 
+    dplyr::mutate(feature = factor(feature_B, 
+                                   ordered = TRUE,
+                                   levels = unique(corr.df.trim$feature_B)[feature_B.order] )) %>% 
+    dplyr::mutate(feature_A = factor(feature_A, 
+                                     ordered = TRUE,
+                                     levels = unique(corr.df.trim$feature_A)[feature_A.order] )) 
+  
+  ### Plot Heatmap
+  h1 <- 
+    corr.df.trim.ordered %>% 
+    mutate(siglabel = if_else(q < 0.20, "*", "")) %>%
+    mutate(tissue_A = factor(tissue_A, levels = facet_ord)) %>%
+    ggplot(aes(x = feature_A_obj, 
+               y = fct_relevel(feature_B, unique(corr.df.trim$feature_B)[feature_B.order]), 
+               fill = rho)) +
+    geom_tile() + 
+    geom_text(aes(label=siglabel), size=5 ,vjust = 0.77, color = "white") +
+    labs(fill = "Spearman's correlation") +
+    scale_y_discrete(position = "right") +
+    scale_fill_distiller(palette = "RdBu") +
+    # scale_fill_gradient2(low="#538cb8", high="#e21d1d",
+    #                      midpoint = 0, limit = c(-1,1), space = "lab") +
+    facet_grid(cols = vars(tissue_A), scales = "free_x", space = "free_x") +
+    # facet_grid(tissue_A_group~tissue_A, scales = "free", space = "free", drop = TRUE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle=90, hjust =1),
+      legend.position = "top",
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      axis.ticks = element_blank(),
+      panel.background = element_blank(),
+      strip.background = element_rect(fill = "white"),
+      plot.margin = unit(c(1, 1, 1, 2), "cm")
+    )
+  
+  print(h1)
+  return(h1)
+}
+
 
 corr_heatmap_facet_behav <- function(corr.df, 
                                facet_ord = c("PostWean", "Juvenile", "Adult")){
@@ -656,7 +644,6 @@ corr_heatmap_facet_behav <- function(corr.df,
     labs(fill = "Spearman's correlation") +
     scale_y_discrete(position = "right") +
     scale_fill_distiller(palette = "RdBu") +
-    # facet_wrap(~timepoint, scales = "free_x", nrow = 1) +
     facet_grid(cols = vars(timepoint), scales = "free_x", space = "free_x") +
     theme_bw() +
     theme(
@@ -674,6 +661,9 @@ corr_heatmap_facet_behav <- function(corr.df,
   print(h1)
   return(h1)
 }
+
+
+
 # _______________________________________________________________________________
 
 corr_heatmap_FDR <- function(df){
@@ -706,11 +696,33 @@ corr_heatmap_FDRv3_behavior <- function(df){
     ungroup()
 }
 
+corr_FDR_16S <- function(df){
+  df %>% 
+    group_by(feature_A) %>%
+    mutate(q = p.adjust(p, method = 'BH')) %>%
+    ungroup() %>% 
+    separate(feature_B, c("feature_B_obj", "tissue_B"), sep = "__", remove = F)
+}
+
+corr_FDR_16S_cyt <- function(df){
+  df %>% 
+    group_by(feature_A) %>%
+    mutate(q = p.adjust(p, method = 'BH')) %>%
+    ungroup() %>% 
+    separate(feature_B, c("feature_B_obj", "tissue_B"), sep = "__", remove = F) %>% 
+    separate(object_name, c("correlation_objects", "condition", "tissue"), sep = "__", remove = F)
+}
+
 
 # _______________________________________________________________________________
 
-top_n_scatterplots <- function(hitslist, merged_data, data_type, 
-                               folder_prefix = "figures/correlations/scatterplots/") {
+top_n_scatterplots <- function(hitslist,
+                               merged_data,
+                               data_type,
+                               folder_prefix = "figures/correlations/scatterplots/",
+                               subdir = T) {
+  dir.create(file.path(folder_prefix), showWarnings = FALSE)
+  
   for (corr in 1:nrow(hitslist)) {
     cor_row <- hitslist[corr, ]
     p <- corr_scatter_plot(
@@ -719,7 +731,8 @@ top_n_scatterplots <- function(hitslist, merged_data, data_type,
       feature_var = cor_row$feature_A,
       metadata_var = cor_row$feature_B,
       data_type,
-      folder_prefix
+      folder_prefix,
+      subdir
     )
     
   }
@@ -728,7 +741,7 @@ top_n_scatterplots <- function(hitslist, merged_data, data_type,
 # _______________________________________________________________________________
 
 corr_scatter_plot <- function(df.plot, corr_obj, feature_var, metadata_var, 
-                              data_type, folder_prefix){
+                              data_type, folder_prefix, subdir = T){
   
   #' Function creates a scatter plot of a given feature and a metadata column
   
@@ -764,8 +777,11 @@ corr_scatter_plot <- function(df.plot, corr_obj, feature_var, metadata_var,
   print(plot)
   figurename <- paste0(stat_col$feature_A[[1]], " vs ", stat_col$feature_B[[1]]) %>% 
     str_replace_all("[[:punct:]]", " ")
-  plot.name = paste0(folder_prefix, stat_col$tissue_B, "/", 
-                     data_type, figurename, ".svg")
+  if (subdir){
+    plot.name = paste0(folder_prefix, stat_col$tissue_B, "/", data_type, figurename, ".svg")
+  } else {
+    plot.name = paste0(folder_prefix, "/", data_type, figurename, ".svg")
+  }
   print(plot.name)
   ggsave(plot, filename = plot.name, height = 4, width = 5, )
 }

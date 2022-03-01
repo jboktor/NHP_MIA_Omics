@@ -6,7 +6,7 @@ source("src/_misc_functions.R")
 df_corr_all <-
   read_excel("data/correlations_metabolite-to-metabolite/all_metabolite_corrs.xlsx",
              sheet = "Sheet 1")
-pathway_map <- read_excel("input_files/pathway_map.xlsx", sheet = "Sheet 1")
+pathway_map <- read_excel("input_files/misc/pathway_map.xlsx", sheet = "Sheet 1")
 pathway_map_join <- pathway_map %>% dplyr::rename("feature_A" = "BIOCHEMICAL")
 pathway_map_sub2sup <- pathway_map %>% 
   janitor::clean_names() %>% 
@@ -86,7 +86,7 @@ load("input_files/scaled_&_imputed_abundance.RData")
 load("input_files/cytokine_profiles_no_stimulant.RData")
 load("input_files/behaviors.RData")
 
-keys2join <- read_xlsx('input_files/sample_keys.xlsx', sheet = 'keys') %>%
+keys2join <- read_xlsx('input_files/misc/sample_keys.xlsx', sheet = 'keys') %>%
   select(SampleID, group, treatment) %>% 
   column_to_rownames(var = "SampleID")
 
@@ -145,7 +145,7 @@ top_n_scatterplots(merged_data = merged_cyt_data,
 # Behavior scatterplot loop ----
 behavior_hits <- 
   behavior_all_mets_fdr %>% 
-  filter(q < 0.25) %>%
+  # filter(q < 0.25) %>%
   group_by(tissue_B) %>%
   slice_min(order_by = q, n = 5)
 
@@ -476,9 +476,11 @@ sup_enrichment <-
 ggsave(sup_enrichment, filename = "figures/correlations/pathway_enrichment/superpathway_cytokine_enrichment_summary.png",
        width = 9, height = 4)
 
+
 # figure - Subpathways enrichment barplots ----
 sub_enrichment <- 
   cor_enrichment_df %>% 
+  filter(super_pathway !=  "Partially Characterized Molecules") %>% 
   filter(k > 0) %>%
   filter(n > 2) %>% 
   ggplot(aes(x=-log10(enrichment), y=fct_relevel(sub_pathway, level_order), fill = cytokine)) +
@@ -487,9 +489,10 @@ sub_enrichment <-
   facet_grid(super_pathway~metabolite_origin, scales = "free_y", space = "free") +
   labs(x = expression(paste(-log[10], "[ enrichment statistic ]")),
        y = NULL, fill = NULL) +
-  my_clean_theme()
+  my_clean_theme() +
+  theme(strip.text.y.right = element_text(angle = 0))
 
-ggsave(sub_enrichment, filename = "figures/correlations/pathway_enrichment/subpathway_cytokine_enrichment_summary.png",
+ggsave(sub_enrichment, filename = "figures/correlations/pathway_enrichment/subpathway_cytokine_enrichment_summary_new.svg",
        width = 12, height = 12)
 
 

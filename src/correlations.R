@@ -7,26 +7,26 @@ source("src/_misc_functions.R")
 
 # Create one dataframe with all scaled / imputed data
 df_plasma_scaled_imp <-
-  read_xlsx('input_files/NHP Plasma HD4 Metabolon.xlsx', sheet = 'ScaledImpData') %>% 
+  read_xlsx('input_files/Metabolomics/NHP Plasma HD4 Metabolon.xlsx', sheet = 'ScaledImpData') %>% 
   mutate(tissue = "Plasma")
 df_csf_scaled_imp <-
-  read_xlsx('input_files/NHP CSF Metabolon.xlsx', sheet = 'ScaledImpData') %>% 
+  read_xlsx('input_files/Metabolomics/NHP CSF Metabolon.xlsx', sheet = 'ScaledImpData') %>% 
   mutate(tissue = "CSF")
 df_jejunum_scaled_imp <-
-  read_xlsx('input_files/NHP Jejunum Metabolon.xlsx', sheet = 'ScaledImpData') %>% 
+  read_xlsx('input_files/Metabolomics/NHP Jejunum Metabolon.xlsx', sheet = 'ScaledImpData') %>% 
   mutate(tissue = "Jejunum")
 df_ileum_scaled_imp <-
-  read_xlsx('input_files/NHP Ileum Metabolon.xlsx', sheet = 'ScaledImpData') %>% 
+  read_xlsx('input_files/Metabolomics/NHP Ileum Metabolon.xlsx', sheet = 'ScaledImpData') %>% 
   mutate(tissue = "Ileum")
 df_colon_scaled_imp <-
-  read_xlsx('input_files/NHP Colon Metabolon.xlsx', sheet = 'ScaledImpData') %>% 
+  read_xlsx('input_files/Metabolomics/NHP Colon Metabolon.xlsx', sheet = 'ScaledImpData') %>% 
   mutate(tissue = "Colon")
 df_feces_scaled_imp <-
-  read_xlsx('input_files/NHP Feces Metabolon.xlsx', sheet = 'ScaledImpData') %>% 
+  read_xlsx('input_files/Metabolomics/NHP Feces Metabolon.xlsx', sheet = 'ScaledImpData') %>% 
   mutate(tissue = "Feces")
-keys <- read_xlsx('input_files/sample_keys.xlsx', sheet = 'keys') %>%
+keys <- read_xlsx('input_files/misc/sample_keys.xlsx', sheet = 'keys') %>%
   select(SampleID, group, treatment)
-keys2 <- read_xlsx('input_files/sample_keys.xlsx', sheet = 'keys') %>%
+keys2 <- read_xlsx('input_files/misc/sample_keys.xlsx', sheet = 'keys') %>%
   select(subject_id, SampleID) %>% 
   dplyr::rename("Animal" = "subject_id" )
 
@@ -46,7 +46,8 @@ df_all <- df_scaled_imp %>%
   pivot_wider(values_from = "value", names_from = "analyte__tissue") %>% 
   column_to_rownames(var = "SampleID")
 
-# save(df_all, file = "input_files/scaled_&_imputed_abundance.RData")
+# saveRDS(df_scaled_imp, file = "input_files/Metabolomics/scaled_&_imputed_abundance_annotated.rds")
+# saveRDS(df_all, file = "input_files/Metabolomics/scaled_&_imputed_abundance.rds")
 
 # Superpathway means ----
 df_superpath <- super_path_avg(df_scaled_imp, keys = keys) %>% 
@@ -90,10 +91,10 @@ pathway_map <- df_scaled_imp %>%
   select(BIOCHEMICAL, `SUPER PATHWAY`, `SUB PATHWAY`) %>% 
   distinct()
 
-# write.xlsx(pathway_map, 'input_files/pathway_map.xlsx')
-# write.xlsx(df_cor_superpath, 'data/correlations_metabolite-to-metabolite/superpathway_corrs.xlsx')
-# write.xlsx(df_cor_subpath, 'data/correlations_metabolite-to-metabolite/subpathway_corrs.xlsx')
-# write.xlsx(df_cor_all, 'data/correlations_metabolite-to-metabolite/all_metabolite_corrs.xlsx')
+# write.xlsx(pathway_map, 'input_files/misc/pathway_map.xlsx')
+# write.xlsx(df_cor_superpath, 'data/correlations/metabolite-to-metabolite/superpathway_corrs.xlsx')
+# write.xlsx(df_cor_subpath, 'data/correlations/metabolite-to-metabolite/subpathway_corrs.xlsx')
+# write.xlsx(df_cor_all, 'data/correlations/metabolite-to-metabolite/all_metabolite_corrs.xlsx')
 
 #_______________________________________________________________________________
 #                Metabolite x Cytokine Correlations --------
@@ -152,6 +153,18 @@ df_GI_media<-
   column_to_rownames(var = "SampleID") %>% 
   select(-"NA")
 
+GI_cytokines <- list("Media"=df_GI_media,
+                     "PMAiono" = df_GI_PMAiono,
+                     "PolyIC" = df_GI_PolyIC,
+                     "ConA" = df_GI_ConA)
+saveRDS(GI_cytokines, file = "input_files/Behavior_Immune_data/GI_cytokines_all.rds")
+saveRDS(df_GI_ConA, file = "input_files/Behavior_Immune_data/GI_ConA.rds")
+saveRDS(df_GI_PolyIC, file = "input_files/Behavior_Immune_data/GI_PolyIC.rds")
+saveRDS(df_GI_PMAiono, file = "input_files/Behavior_Immune_data/GI_PMAiono.rds")
+saveRDS(df_GI_media, file = "input_files/Behavior_Immune_data/GI_media.rds")
+
+
+
 gi_cona_sup <- corr_loop_parallel(df_GI_ConA, df_superpath, obj.name = "Cytokine__ConA")
 gi_cona_sub <- corr_loop_parallel(df_GI_ConA, df_subpath, obj.name = "Cytokine__ConA")
 
@@ -189,7 +202,7 @@ GI_bioplex_corrs <- list(
 )
 
 
-# write.xlsx(GI_bioplex_corrs, 'data/correlations_cytokine_metabolite/GI_Bioplex_Correlations.xlsx')
+# write.xlsx(GI_bioplex_corrs, 'data/correlations/cytokine_metabolite/GI_Bioplex_Correlations.xlsx')
 
 heatmap_gi_cona_superpath <- corr_heatmap_facet(gi_cona_sup_fdr)
 ggsave(heatmap_gi_cona_superpath, filename = "figures/correlations/heatmap_GI_ConA_superpaths.svg",
@@ -274,7 +287,7 @@ brain_bioplex_corrs <- list(
 )
 
 # write.xlsx(brain_bioplex_corrs,
-#            'data/correlations_cytokine_metabolite/Brain_tissue_Bioplex_Correlations.xlsx')
+#            'data/correlations/cytokine_metabolite/Brain_tissue_Bioplex_Correlations.xlsx')
 
 
 heatmap_brain_media_superpath <- 
@@ -334,7 +347,7 @@ cytokine_profiles_noStim <- list(
   "Brain_cytokines" = df_brain_media,
   "Plasma_cytokines" = df_plasma_media
 )
-# save(cytokine_profiles_noStim, file = "input_files/cytokine_profiles_no_stimulant.RData")
+saveRDS(cytokine_profiles_noStim, file = "input_files/Behavior_Immune_data/cytokine_profiles_all_tissues_no_stimulant.rds")
 
 plasma_media_sup <- corr_loop_parallel(df_plasma_media, df_superpath, obj.name = "Cytokine__Plasma__NoStimulant")
 plasma_media_sub <- corr_loop_parallel(df_plasma_media, df_subpath, obj.name = "Cytokine__Plasma__NoStimulant")
@@ -395,7 +408,7 @@ plasma_bioplex_corrs <- list(
 )
 
 # write.xlsx(plasma_bioplex_corrs,
-#            'data/correlations_cytokine_metabolite/Blood_Bioplex_Correlations.xlsx')
+#            'data/correlations/cytokine_metabolite/Blood_Bioplex_Correlations.xlsx')
 
 heatmap_plasma_media_allMets <- corr_heatmap(plasma_media_allMets_fdr)
 ggsave(heatmap_plasma_media_allMets, filename = "figures/correlations/heatmap_plasma_media_allMets.svg",
@@ -493,7 +506,8 @@ df_behavior <- df_behav_eda %>%
 
 behavior_data <- list("df_behavior" = df_behavior, 
                       "df_behav_eda" = df_behav_eda)
-save(behavior_data, file = "input_files/behaviors.RData")
+
+saveRDS(behavior_data, file = "input_files/Behavior_Immune_data/behaviors.rds")
 
 behavior_sup <- corr_loop_parallel(df_behavior, df_superpath, obj.name = "Behavior")
 behavior_sub <- corr_loop_parallel(df_behavior, df_subpath, obj.name = "Behavior")
@@ -532,5 +546,76 @@ behavior_corrs <- list(
   "behaviors_allMetabolites" = behavior_all_mets_fdr)
 
 # write.xlsx(behavior_corrs,
-#            'data/correlations_behavior_metabolite/Behavior_Metabolite_Correlations.xlsx')
+#            'data/correlations/behavior_metabolite/Behavior_Metabolite_Correlations.xlsx')
+
+
+
+#_______________________________________________________________________________
+# Saving a clean cytokine correlation datatable for supplement ----
+
+
+# GI Cytokine Profiles 
+df_GI_media <-
+  read_xlsx('input_files/Behavior_Immune_data/AMA 27 GI tissues media 072513.xlsx', sheet = 'Sheet1') %>% 
+  select(-c(Gender, Study_group, Description)) %>% 
+  pivot_longer(!c(Animal, `GI Section`), names_to = "cytokine") %>% 
+  separate(cytokine, c("cytokine", "trash"), sep = " ") %>% 
+  right_join(keys2, by = "Animal") %>% 
+  select(-trash) %>% 
+  pivot_wider(names_from = "cytokine", values_from = "value") %>%
+  select(-"NA") %>% 
+  dplyr::rename(Tissue = `GI Section`) %>% 
+  drop_na(Tissue)
+
+# Brain Cytokine Profiles 
+df_brain_media <-
+  read_xlsx('input_files/Behavior_Immune_data/AMA27 - brain cytokines.xlsx', sheet = 'Sheet1') %>% 
+  select(-c(Study, Study_group)) %>% 
+  pivot_longer(!Animal, names_to = "cytokine_longname") %>% 
+  mutate(cytokine_longname = gsub("_y4", "", cytokine_longname)) %>% 
+  separate(cytokine_longname, c("Tissue", "cytokine"), sep = "_") %>% 
+  mutate(cytokine = toupper(cytokine)) %>% 
+  mutate(cytokine = str_replace(cytokine, "IL-", "IL")) %>% 
+  mutate(cytokine = str_replace(cytokine, "GCSF", "G-CSF")) %>% 
+  mutate(cytokine = str_replace(cytokine, "IL12P40", "IL12p40")) %>% 
+  mutate(cytokine = str_replace(cytokine, "MCP1", "MCP-1")) %>% 
+  mutate(cytokine = str_replace(cytokine, "MIP-1A", "MIP1A")) %>% 
+  mutate(cytokine = str_replace(cytokine, "MCP1", "MCP-1")) %>% 
+  mutate(cytokine = str_replace(cytokine, "SCD40L", "sCD40L")) %>% 
+  pivot_wider(names_from = "cytokine", values_from = "value") %>%
+  right_join(keys2, by = "Animal") %>% 
+  relocate(SampleID, .after = Tissue) %>% 
+  arrange(Tissue)
+
+# Plasma Profiles 
+df_plasma_media <-
+  read_xlsx('input_files/Behavior_Immune_data/Year 4 Blood Cytokine data.xlsx', sheet = 'Media') %>% 
+  select(-c(Gender, treatment)) %>% 
+  pivot_longer(!Animal, names_to = "cytokine") %>% 
+  mutate(cytokine = gsub("m_y4_", "", cytokine)) %>% 
+  mutate(cytokine = toupper(cytokine)) %>% 
+  mutate(cytokine = str_replace(cytokine, "IL-", "IL")) %>% 
+  mutate(cytokine = str_replace(cytokine, "GCSF", "G-CSF")) %>% 
+  mutate(cytokine = str_replace(cytokine, "IL12P40", "IL12p40")) %>% 
+  mutate(cytokine = str_replace(cytokine, "MCP1", "MCP-1")) %>% 
+  mutate(cytokine = str_replace(cytokine, "MIP-1A", "MIP1A")) %>% 
+  mutate(cytokine = str_replace(cytokine, "MCP1", "MCP-1")) %>% 
+  mutate(cytokine = str_replace(cytokine, "SCD40L", "sCD40L")) %>% 
+  pivot_wider(names_from = "cytokine", values_from = "value") %>%
+  right_join(keys2, by = "Animal") %>% 
+  mutate(Tissue = "Blood") %>% 
+  relocate(Tissue, .after = Animal) %>% 
+  relocate(SampleID, .after = Tissue) 
+
+  
+final_cytokine_profile_inputs <- list(
+  "GI Tissue" = df_GI_media,
+  "Brain Tissue" = df_brain_media,
+  "Blood Tissue" = df_plasma_media
+)
+
+write.xlsx(final_cytokine_profile_inputs,
+           'data/correlations/cytokine-to-metabolite/Cytokine_profiles.xlsx', 
+           overwrite = T)
+
 
