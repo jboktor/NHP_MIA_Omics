@@ -4,32 +4,32 @@ source("src/_misc_functions.R")
 
 # This script generates tSNE and PCA ordination plots for all samples 
 
-plasmaInd <- read_xlsx('input_files/NHP Plasma HD4 Metabolon.xlsx', sheet = 'ScaledImpData')
+plasmaInd <- read_xlsx('input_files/Metabolomics/NHP Plasma HD4 Metabolon.xlsx', sheet = 'ScaledImpData')
 plasmaInd <- plasmaInd[-2:-3]
 plasma_labs <- c("BIOCHEMICAL", paste0(colnames(plasmaInd[2:24]), " Plasma")) 
 colnames(plasmaInd) <- plasma_labs
 
-csfInd <- read_xlsx('input_files/NHP CSF Metabolon.xlsx', sheet = 'ScaledImpData')
+csfInd <- read_xlsx('input_files/Metabolomics/NHP CSF Metabolon.xlsx', sheet = 'ScaledImpData')
 csfInd <- csfInd[-2:-3]
 csf_labs <- c("BIOCHEMICAL", paste0(colnames(csfInd[2:22]), " CSF")) 
 colnames(csfInd) <- csf_labs
 
-jejunumInd <- read_xlsx('input_files/NHP Jejunum Metabolon.xlsx', sheet = 'ScaledImpData')
+jejunumInd <- read_xlsx('input_files/Metabolomics/NHP Jejunum Metabolon.xlsx', sheet = 'ScaledImpData')
 jejunumInd <- jejunumInd[-2:-3]
 Jej_labs <- c("BIOCHEMICAL", paste0(colnames(jejunumInd[2:22]), " Jejunum")) 
 colnames(jejunumInd) <- Jej_labs
 
-ileumInd <- read_xlsx('input_files/NHP Ileum Metabolon.xlsx', sheet = 'ScaledImpData')
+ileumInd <- read_xlsx('input_files/Metabolomics/NHP Ileum Metabolon.xlsx', sheet = 'ScaledImpData')
 ileumInd <- ileumInd[-2:-3]
 Ile_labs <- c("BIOCHEMICAL", paste0(colnames(ileumInd[2:22]), " Ileum")) 
 colnames(ileumInd) <- Ile_labs
 
-colonInd <- read_xlsx('input_files/NHP Colon Metabolon.xlsx', sheet = 'ScaledImpData')
+colonInd <- read_xlsx('input_files/Metabolomics/NHP Colon Metabolon.xlsx', sheet = 'ScaledImpData')
 colonInd <- colonInd[-2:-3]
 Col_labs <- c("BIOCHEMICAL", paste0(colnames(colonInd[2:22]), " Colon")) 
 colnames(colonInd) <- Col_labs
 
-fecesInd <- read_xlsx('input_files/NHP Feces Metabolon.xlsx', sheet = 'ScaledImpData')
+fecesInd <- read_xlsx('input_files/Metabolomics/NHP Feces Metabolon.xlsx', sheet = 'ScaledImpData')
 fecesInd  <-  fecesInd[-2:-3]
 Fec_labs <- c("BIOCHEMICAL", paste0(colnames(fecesInd[2:22]), " Feces")) 
 colnames(fecesInd) <- Fec_labs
@@ -124,4 +124,5 @@ pca.plot
 
 ggsave(pca.plot, filename = "figures/ordination/PCA_all_tissues.svg",
        width = 4, height = 3)
-  
+
+

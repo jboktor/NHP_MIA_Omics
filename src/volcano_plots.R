@@ -33,7 +33,6 @@ for (tissue in tissue_order) {
   all_features <- filter(df_stats, all_sig=="A" | all_sig=="B" ) %>% 
     slice_max(order_by = `Negative Log(P/S p-value)`, n=10)
   
-  
   v1 <- volcano_plot(
     df = df_stats,
     x = df_stats$`Log2 PM/SM`,
