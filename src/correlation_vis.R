@@ -2,7 +2,7 @@
 source("src/_load_packages.R")
 source("src/_misc_functions.R")
 
-# Load data 
+# Load data ----
 pathway_map <-
   read_excel("input_files/misc/pathway_map.xlsx", sheet = "Sheet 1")
 pathway_map_join <-
@@ -11,27 +11,6 @@ pathway_map_sub2sup <- pathway_map %>%
   janitor::clean_names() %>%
   select(super_pathway, sub_pathway) %>%
   distinct()
-#_______________________________________________________________________________
-#                           Loading Correlation data                        ---- 
-#_______________________________________________________________________________
-
-# gi_media_allMets_fdr <-
-#   read_excel("data/correlations_cytokine_metabolite/GI_Bioplex_Correlations.xlsx",
-#              sheet = "GI_Media_allMets") %>% 
-#   mutate(tissue_A_group = "GI")
-# 
-# brain_allMets_fdr <-
-#   read_excel("data/correlations_cytokine_metabolite/Brain_tissue_Bioplex_Correlations.xlsx",
-#              sheet = "Brain_tissue_allMets") %>% 
-#   mutate(tissue_A = if_else(grepl("PLASMA", tissue_A), paste0("Brain Plasma"), tissue_A)) %>% 
-#   mutate(tissue_A_group = "Brain")
-# 
-# plasma_media_allMets_fdr <-
-#   read_excel("data/correlations_cytokine_metabolite/Blood_Bioplex_Correlations.xlsx",
-#              sheet = "plasma_Media_allMets") %>% 
-#   mutate(tissue_A_group = "Plasma")
-
-# cytokine_cors <- bind_rows(gi_media_allMets_fdr, brain_allMets_fdr, plasma_media_allMets_fdr)
 
 cyt_to_mets <- 'data/correlations/cytokine-to-metabolite/'
 
@@ -83,19 +62,24 @@ feces_cyt_cors.plot <- corr_heatmap_facet_v2(feces_cyt_cors, facet_ord =cyt_tiss
 ggsave(feces_cyt_cors.plot, filename = "figures/correlations/2022-07-05_heatmap_Feces_allmets_allcytokines.svg",
        width = 25, height =6)
 
-
 #_______________________________________________________________________________
 #                          Correlation Scatterplots                        ---- 
 #_______________________________________________________________________________
-load("input_files/scaled_&_imputed_abundance.RData")
-load("input_files/cytokine_profiles_no_stimulant.RData")
-load("input_files/behaviors.RData")
+# load("input_files/scaled_&_imputed_abundance.RData")
+# load("input_files/Behavior_Immune_data/cytokine_profiles_all_tissues_no_stimulant.rds")
+# readRDS('data/cytokines/2022-07-05_cytokine-profiles_imputed.rds')
+
+df_all <- readRDS('data/metabolomics/2022-07-05_scaled_imputed_abundance.rds')
+behavior_data <- readRDS('data/behaviors/2022-07-05_behaviors.rds')
+cytokine_data <- readRDS('data/cytokines/2022-07-05_cytokine-profiles_imputed.rds')
+
+# TODO will probably need to pivot cytokine_data into long format
 
 keys2join <- read_xlsx('input_files/misc/sample_keys.xlsx', sheet = 'keys') %>%
   select(SampleID, group, treatment) %>% 
   column_to_rownames(var = "SampleID")
 
-# Cytokine scatterplot loop ----
+## Cytokine scatterplot loop ----
 # Selects top 5 most significant associations per tissue source (of mets)
 cytokine_hits <- 
   cytokine_cors %>% 
@@ -147,7 +131,7 @@ top_n_scatterplots(merged_data = merged_cyt_data,
                    folder_prefix = "figures/correlations/manual_scatterplots/")
 
 
-# Behavior scatterplot loop ----
+## Behavior scatterplot loop ----
 behavior_hits <- 
   behavior_all_mets_fdr %>% 
   # filter(q < 0.25) %>%
@@ -205,7 +189,8 @@ supcount <-
        y = NULL, fill = NULL) +
   my_clean_theme() 
 
-ggsave(supcount, filename = glue('{path_enrich_loc}/2022-07-05_superpathway_cytokine_summary.png'),
+ggsave(supcount, 
+       filename = glue('{path_enrich_loc}/2022-07-05_superpathway_cytokine_summary.png'),
        width = 9, height = 4)
 
 
@@ -221,7 +206,8 @@ subcount <-
        y = NULL, fill = NULL) +
   my_clean_theme()
 
-ggsave(subcount, filename = glue('{path_enrich_loc}/2022-07-05_subpathway_cytokine_summary.png'),
+ggsave(subcount, 
+       filename = glue('{path_enrich_loc}/2022-07-05_subpathway_cytokine_summary.png'),
        width = 12, height = 12)
 
 
@@ -229,125 +215,77 @@ ggsave(subcount, filename = glue('{path_enrich_loc}/2022-07-05_subpathway_cytoki
 #                    Pathway Enrichment Analysis            ---- 
 #_______________________________________________________________________________
 
-enrichment_df <- tibble()
-for (metadata_var in unique(cytokine_cors_mapped$feature_a)) {
-  for (tissue in unique(cytokine_cors_mapped$tissue_b)) {
-    
-    strat1 <- cytokine_cors_mapped %>%
-      filter(tissue_b == tissue) %>%
-      filter(feature_a == metadata_var) %>%
-      distinct_at(vars(feature_a, feature_b, sub_pathway, tissue_b))
-    strat1_sig <- cytokine_cors_mapped %>%
-      filter(q < 0.25) %>%
-      filter(tissue_b == tissue) %>%
-      filter(feature_a == metadata_var) %>%
-      distinct_at(vars(feature_a, feature_b, sub_pathway, tissue_b))
-    
-    for (path in unique(cytokine_cors_mapped$sub_pathway)) {
-      total_lib <- strat1 %>% nrow()
-      total_sig_lib <- strat1_sig %>% nrow()
-      path_lib <- strat1 %>%
-        filter(sub_pathway ==  path) %>%
-        nrow()
-      path_sig_lib <- strat1_sig %>%
-        filter(sub_pathway ==  path) %>%
-        nrow()
-      
-      enrichment_value <-
-        enrichment_formula(N = total_lib,
-                           n = total_sig_lib,
-                           m = path_lib,
-                           k = path_sig_lib)
-      
-      row2add <-
-        cbind(
-          "cytokine" = metadata_var,
-          "tissue" = tissue,
-          "path" = path,
-          "N" = total_lib,
-          "n" = total_sig_lib,
-          "m" = path_lib,
-          "k" = path_sig_lib,
-          "enrichment" = enrichment_value
-        )
-      
-      enrichment_df <- rbind(enrichment_df, row2add)
-      cat(path, "enrichment_value: ", enrichment_value, "\n\n")
-    }
-  }
-}
-
-statvars <- c("N", "n", "m", "k", "enrichment")
-enrichment_df <-
-  enrichment_df %>%
-  mutate(across(all_of(statvars), as.character),
-         across(all_of(statvars), as.numeric))
-enrichment_df <- enrichment_df %>% 
-  dplyr::rename(sub_pathway = path) %>% 
-  left_join(pathway_map_sub2sup, by = "sub_pathway")
-
-# # Wrangling data format
-cor_enrichment_df <- 
-  enrichment_df %>% 
-  dplyr::rename(metabolite_origin = tissue) %>% 
-  separate(cytokine, into = c('cytokine', 'cytokine_origin'), sep = '__')
-
+# enrichment_df <- tibble()
+# for (metadata_var in unique(cytokine_cors_mapped$feature_a)) {
+#   for (tissue in unique(cytokine_cors_mapped$tissue_b)) {
+#     
+#     strat1 <- cytokine_cors_mapped %>%
+#       filter(tissue_b == tissue) %>%
+#       filter(feature_a == metadata_var) %>%
+#       distinct_at(vars(feature_a, feature_b, sub_pathway, tissue_b))
+#     strat1_sig <- cytokine_cors_mapped %>%
+#       filter(q < 0.25) %>%
+#       filter(tissue_b == tissue) %>%
+#       filter(feature_a == metadata_var) %>%
+#       distinct_at(vars(feature_a, feature_b, sub_pathway, tissue_b))
+#     
+#     for (path in unique(cytokine_cors_mapped$sub_pathway)) {
+#       total_lib <- strat1 %>% nrow()
+#       total_sig_lib <- strat1_sig %>% nrow()
+#       path_lib <- strat1 %>%
+#         filter(sub_pathway ==  path) %>%
+#         nrow()
+#       path_sig_lib <- strat1_sig %>%
+#         filter(sub_pathway ==  path) %>%
+#         nrow()
+#       
+#       enrichment_value <-
+#         enrichment_formula(N = total_lib,
+#                            n = total_sig_lib,
+#                            m = path_lib,
+#                            k = path_sig_lib)
+#       
+#       row2add <-
+#         cbind(
+#           "cytokine" = metadata_var,
+#           "tissue" = tissue,
+#           "path" = path,
+#           "N" = total_lib,
+#           "n" = total_sig_lib,
+#           "m" = path_lib,
+#           "k" = path_sig_lib,
+#           "enrichment" = enrichment_value
+#         )
+#       
+#       enrichment_df <- rbind(enrichment_df, row2add)
+#       cat(path, "enrichment_value: ", enrichment_value, "\n\n")
+#     }
+#   }
+# }
+# 
+# statvars <- c("N", "n", "m", "k", "enrichment")
+# enrichment_df <-
+#   enrichment_df %>%
+#   mutate(across(all_of(statvars), as.character),
+#          across(all_of(statvars), as.numeric))
+# enrichment_df <- enrichment_df %>% 
+#   dplyr::rename(sub_pathway = path) %>% 
+#   left_join(pathway_map_sub2sup, by = "sub_pathway")
+# 
 # # Wrangling data format
 # cor_enrichment_df <- 
 #   enrichment_df %>% 
-#   mutate(cytokine = if_else(grepl("M_", cytokine), 
-#                                   paste0(gsub("M_", "", cytokine), "__Plasma"),  
-#                                   cytokine)) %>% 
-#   mutate(cytokine = if_else(grepl("GCSF_", cytokine),
-#                             paste0(gsub("GCSF_", "protect_gransf_", cytokine)),
-#                             cytokine)) %>%
-#   mutate(cytokine = if_else(grepl("G-CSF_", cytokine),
-#                             paste0(gsub("G-CSF_", "protect_gransf_", cytokine)),
-#                             cytokine)) %>% 
-#   mutate(cytokine = if_else(grepl("GM-CSF_", cytokine),
-#                             paste0(gsub("GM-CSF_", "protect_monf_", cytokine)),
-#                             cytokine)) %>% 
-#   mutate(cytokine = if_else(grepl("GMCSF_", cytokine),
-#                             paste0(gsub("GMCSF_", "protect_monf_", cytokine)),
-#                             cytokine)) %>%
-#   mutate(cytokine = if_else(grepl("CSF_", cytokine),
-#                             paste0(gsub("CSF_", "", cytokine), "__CSF"),
-#                             cytokine)) %>%
-#   mutate(cytokine = if_else(grepl("protect_gransf_", cytokine),
-#                             paste0(gsub("protect_gransf_", "G-CSF_", cytokine)),
-#                             cytokine)) %>% 
-#   mutate(cytokine = if_else(grepl("protect_monf_", cytokine),
-#                             paste0(gsub("protect_monf_", "GM-CSF_", cytokine)),
-#                             cytokine)) %>% 
-#   mutate(cytokine = if_else(grepl("AC_", cytokine), 
-#                             paste0(gsub("AC_", "", cytokine), "__Anterior Cingulate"),  # DOUBLE CHECK
-#                             cytokine)) %>% 
-#   mutate(cytokine = if_else(grepl("HIPP_", cytokine), 
-#                             paste0(gsub("HIPP_", "", cytokine), "__Hippocampus"),  
-#                             cytokine)) %>% 
-#   mutate(cytokine = if_else(grepl("PLASMA_", cytokine), 
-#                             paste0(gsub("PLASMA_", "", cytokine), "__Brain Plasma"),  
-#                             cytokine)) %>% 
-#   mutate(cytokine_feature = if_else(grepl("CORTEX_", cytokine), 
-#                                     paste0(gsub("CORTEX_", "", cytokine), "__Cortex"),  
-#                                   cytokine)) %>% 
-#   separate(cytokine_feature, c("cytokine", "cytokine_origin"), sep = "__", remove = F) %>% 
-#   mutate(cytokine = toupper(cytokine)) %>% 
-#   mutate(cytokine = str_replace(cytokine, "IL-", "IL")) %>% 
-#   mutate(cytokine = str_replace(cytokine, "GCSF", "G-CSF")) %>% 
-#   mutate(cytokine = str_replace(cytokine, "IL12P40", "IL12p40")) %>% 
-#   mutate(cytokine = str_replace(cytokine, "MCP1", "MCP-1")) %>% 
-#   mutate(cytokine = str_replace(cytokine, "MIP-1A", "MIP1A")) %>% 
-#   mutate(cytokine = str_replace(cytokine, "MCP1", "MCP-1")) %>% 
-#   mutate(cytokine = str_replace(cytokine, "SCD40L", "sCD40L")) %>% 
-#   dplyr::rename(metabolite_origin = tissue)
+#   dplyr::rename(metabolite_origin = tissue) %>% 
+#   separate(cytokine, into = c('cytokine', 'cytokine_origin'), sep = '__')
 
+# saveRDS(cor_enrichment_df, file = 'data/cytokines/2022-07-08_cytokine-metabolite-corr-pathway-enrichment.rds')
 # write.xlsx(cor_enrichment_df, 
 #            file = 'data/correlations_cytokine_metabolite/2022-07-08_cytokine_correlation_pathway-enrichment-analysis.xlsx')
 
+cor_enrichment_df <- readRDS(
+  file = 'data/cytokines/2022-07-08_cytokine-metabolite-corr-pathway-enrichment.rds')
 
-
-# Enrichment plots ----
+## Enrichment plots ----
 enrichment_df_trim <- cor_enrichment_df %>% 
   filter(k > 0) %>%
   filter(n > 2) %>%
@@ -362,11 +300,10 @@ enrichment_df_labels <-
   slice_min(order_by = enrichment, n = 5)
 
 
-
+## Tissue Specific bubble plot ----
 # Function to display bubble plots
 pathway_enrichment_bubbleplot <- function(cor_enrichment_df, tissue, ynudge = 0.5){
   
-  # Tissue Specific bubble plot ----
   enrichment_df_trim <- cor_enrichment_df %>% 
     filter(metabolite_origin == tissue) %>% 
     filter(k > 0) %>%
@@ -456,9 +393,7 @@ ggsave(feces_bubble,
 
 
 
-
-
-# figure - Superpathway enrichment barplots ----
+## figure - Superpathway enrichment barplots ----
 sup_enrichment <- 
   cor_enrichment_df %>% 
   filter(k > 0) %>%
@@ -477,7 +412,7 @@ ggsave(sup_enrichment,
        width = 9, height = 4)
 
 
-# figure - Subpathways enrichment barplots ----
+## figure - Subpathways enrichment barplots ----
 sub_enrichment <- 
   cor_enrichment_df %>% 
   filter(super_pathway !=  "Partially Characterized Molecules") %>% 
@@ -553,112 +488,3 @@ ggsave(feces_subpath_enriched,
        width = 7, height = 4)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-# cytokine_cors_mapped %>% 
-#   dplyr::group_by(feature_a_obj, super_pathway, tissue_b) %>%
-#   dplyr::summarise(n = n()) %>%
-#   arrange(desc(n))
-
-
-# # Select for correlations to Plasma and identical metabolites across tissues
-# df_cor_all2 <- df_cor_all %>% 
-#   drop_na(P) %>% 
-#   filter(tissue_A == "Plasma",
-#          feature_A == feature_B) %>% 
-#   left_join(pathway_map_join, by = "feature_A")
-# 
-# 
-# df_cor_all2 %>% 
-#   group_by(`SUPER PATHWAY`, tissue_B) %>% 
-#   dplyr::summarise(super_path_mean = mean(rho)) %>% 
-#   dplyr::rename("feature_B" = "SUPER PATHWAY") %>% 
-#     ggplot(aes(x=fct_reorder(feature_B, super_path_mean, .desc = T), y=super_path_mean,
-#                group = tissue_B)) +
-#   geom_rect(aes(xmin=Inf, xmax=-Inf, ymin=0.25, ymax=Inf), alpha = 0.01, fill = "grey") +
-#   geom_rect(aes(xmin=Inf, xmax=-Inf, ymin=-0.25, ymax=-Inf), alpha = 0.01, fill = "grey") +
-#   geom_line(aes(color = tissue_B), size=1.5) +
-#   labs(title = "Superpath correlations between Plasma levels", 
-#        x = NULL, y = "Spearman's Rho", color = "Tissue") +
-#   scale_color_npg() +
-#   my_clean_theme() +
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-# 
-# 
-# cor_avg_summary_subpath <-
-#   df_cor_all2 %>% 
-#   group_by(`SUPER PATHWAY`, `SUB PATHWAY`, tissue_B) %>% 
-#   dplyr::summarise(super_path_mean = mean(rho)) %>% 
-#   dplyr::rename("feature_B" = "SUB PATHWAY") %>% 
-#   ggplot(aes(x=fct_reorder(feature_B, super_path_mean, .desc = T), y=super_path_mean)) +
-#   geom_rect(aes(xmin=Inf, xmax=-Inf, ymin=0.25, ymax=Inf), alpha = 0.01, fill = "grey") +
-#   geom_rect(aes(xmin=Inf, xmax=-Inf, ymin=-0.25, ymax=-Inf), alpha = 0.01, fill = "grey") +
-#   geom_line(aes(color = tissue_B, group = tissue_B), size=1.5) +
-#   geom_point() +
-#   labs(title = "Subpath correlations between Plasma levels", 
-#        x = NULL, y = "Spearman's Rho", color = "Tissue") +
-#   # facet_grid(cols = vars(`SUPER PATHWAY`), scales = "free_x", space = "free_x") +
-#   # facet_wrap(~`SUPER PATHWAY`, ncol = 1, scales = "free_x") +
-#   scale_color_npg() +
-#   my_clean_theme() +
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-# cor_avg_summary_subpath
-# 
-# ggsave(cor_avg_summary_subpath, filename = 
-#          "figures/correlations/2022-07-05_cor_avg_summary_subpath.png", 
-#        width = 14, height = 8)
-# 
-# 
-# plasma_analyte_corrs_v1 <- 
-#   df_cor_all2 %>% 
-#   janitor::clean_names() %>% 
-#   mutate(xcol = paste(super_pathway, tissue_b, sep = "__")) %>% 
-#   ggplot(aes(x=fct_reorder(xcol, rho, .desc = T), y=rho)) +
-#   geom_rect(aes(xmin=Inf, xmax=-Inf, ymin=0.25, ymax=Inf), fill = "#e9e9e9") +
-#   geom_rect(aes(xmin=Inf, xmax=-Inf, ymin=-0.25, ymax=-Inf), fill = "#e9e9e9") +
-#   geom_point(aes(color = tissue_b), alpha = 0.2, position =
-#                position_jitterdodge(jitter.height = 0, jitter.width = 0.2, seed = 42)) +
-#   geom_boxplot(width = 0.1, outlier.alpha = 0, size = 0.3) +
-#   geom_violin(aes(color = tissue_b), alpha = 0.1, size = 0.3) +
-#   labs(x = NULL, y = "Spearman's Rho", color = "Tissue") +
-#   facet_wrap(~super_pathway, scales = "free_x") +
-#   scale_color_npg() +  scale_fill_npg() +
-#   my_clean_theme() +
-#   theme(axis.text.x = element_blank(),
-#         axis.ticks.x.bottom = element_blank())
-# plasma_analyte_corrs_v1
-# 
-# ggsave(plasma_analyte_corrs_v1, 
-#        filename = "figures/correlations/plasma_correlation_distributions_v1.svg",
-#        width = 8, height = 6)
-# 
-# plasma_analyte_corrs_v2 <-
-#   df_cor_all2 %>% 
-#   janitor::clean_names() %>% 
-#   mutate(xcol = paste(super_pathway, tissue_b, sep = "__")) %>% 
-#   ggplot(aes(x=fct_reorder(xcol, rho, .desc = T), y=rho)) +
-#   geom_rect(aes(xmin=Inf, xmax=-Inf, ymin=0.25, ymax=Inf), fill = "#e9e9e9") +
-#   geom_rect(aes(xmin=Inf, xmax=-Inf, ymin=-0.25, ymax=-Inf), fill = "#e9e9e9") +
-#   geom_boxplot(width = 0.1, outlier.alpha = 0, size = 0.3) +
-#   geom_violin(aes(color = tissue_b), alpha = 0.1, size = 0.3) +
-#   labs(x = NULL, y = "Spearman's Rho", color = "Tissue") +
-#   facet_wrap(~super_pathway, scales = "free_x") +
-#   scale_color_npg() +  scale_fill_npg() +
-#   my_clean_theme() +
-#   theme(axis.text.x = element_blank(),
-#         axis.ticks.x.bottom = element_blank())
-# plasma_analyte_corrs_v2
-# 
-# ggsave(plasma_analyte_corrs_v2, 
-#        filename = "figures/correlations/plasma_correlation_distributions_v2.svg",
-#        width = 8, height = 6)

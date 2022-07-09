@@ -3,35 +3,40 @@
 # 16S Analysis functions ----
 #_______________________________________________________________________________
 
-phyloseqRarefy <- function(ps){
-  
+phyloseq_rarefy <- function(ps) {
   # Returns Rarefied Phyloseq Object
-  
-  obj <- ps %>% 
+  obj <- ps %>%
     # remove taxa not detected in this tissue
-    core(detection = 0, prevalence = 1/1000 ) 
-  
+    core(detection = 0, prevalence = 1 / 1000)
   df <- obj %>% abundances() %>% as.data.frame() %>% t()
-  print(paste0("A difference of ", max(rowSums(df)) - min(rowSums(df)), 
-               " reads is detected in sample sequencing depth"))
-  df.rarefied <- vegan::rrarefy(df, sample = min(rowSums(df))) %>% t() %>% as.data.frame()
-  print(paste0("Reads rarefied to: ", max(colSums(df.rarefied))))
-  datObjOut <- phyloseq(otu_table(df.rarefied, taxa_are_rows=T), 
-                        sample_data(meta(obj)), 
-                        tax_table(obj),
-                        phy_tree(obj))
-  return(datObjOut)
+  print(paste0(
+    "A difference of ",
+    max(rowSums(df)) - min(rowSums(df)),
+    " reads is detected in sample sequencing depth"
+  ))
+  df_rarefied <-
+    vegan::rrarefy(df, sample = min(rowSums(df))) %>% t() %>% as.data.frame()
+  print(paste0("Reads rarefied to: ", max(colSums(df_rarefied))))
+  ps_rare <- phyloseq(
+    otu_table(df_rarefied, taxa_are_rows = TRUE),
+    sample_data(meta(obj)),
+    tax_table(obj),
+    phy_tree(obj)
+  )
+  return(ps_rare)
 }
 
 #_______________________________________________________________________________
 
 
-phyloseq_permanova <- function(ps_object, metadata_list, nperm = 10, dist = "Aitchisons"){
-  
+phyloseq_permanova <-
+  function(ps_object,
+           metadata_list,
+           nperm = 10,
+           dist = "Aitchisons") {
   #' Function to analyze phyloseq object with euclidean distance PERMANOVA
   #' Input: a phyloseq object and list of metadata columns to test
   #' Output: data frame with analysis variables
-  
   require(phyloseq)
   require(microbiome)
   require(vegan)
@@ -40,9 +45,8 @@ phyloseq_permanova <- function(ps_object, metadata_list, nperm = 10, dist = "Ait
   require(doParallel)
   permanova_df <- tibble()
   start_time <- Sys.time()
-  
   # Transform count data
-  if (dist == "Aitchisons"){
+  if (dist == "Aitchisons") {
     count_data <- ps_object %>% 
       microbiome::transform("clr") %>% 
       microbiome::abundances() %>% t()
@@ -50,22 +54,17 @@ phyloseq_permanova <- function(ps_object, metadata_list, nperm = 10, dist = "Ait
     count_data <- ps_object %>% 
       microbiome::abundances() %>% t()
   } 
-  
-  
   # pull metadata of interest from ps object
   metadata_vars <- microbiome::meta(ps_object) %>% 
     dplyr::select(all_of(metadata_list))
-  
   # remove metadata with less than 1 unique value
   columns2keep <- sapply(metadata_vars, function(x) length(unique(na.omit(x)))) > 1
   metadata_vars <- metadata_vars[, columns2keep]
-  
   #setup parallel processing
   start_time <- Sys.time()
   cores = detectCores()
   cl <- makeCluster(cores[1] - 2) # to prevent computer overload
   registerDoParallel(cl)
-  
   loop <- 
     foreach(i = 1:length(metadata_vars), 
             .combine = 'rbind', .verbose = F,
@@ -79,7 +78,6 @@ phyloseq_permanova <- function(ps_object, metadata_list, nperm = 10, dist = "Ait
               } else {
                 count_data.narm <- count_data
               }
-              
               # Calculate PERMANOVA
               if (dist == "Aitchisons"){
                 meta_ano <- vegan::adonis(vegan::vegdist(
@@ -326,7 +324,7 @@ decoded_abundance <- function(datObj) {
 #_______________________________________________________________________________
 
 
-corr_heatmap_16s_to_mets <- function(corr.df, trimfeats = T, featselection = "q"){
+corr_heatmap_16s_to_mets <- function(corr.df, trimfeats = TRUE, featselection = "q"){
 
   
   if (trimfeats){
@@ -421,14 +419,7 @@ corr_heatmap_16s_to_cyts <-
   function(corr.df,
            trimfeats = T,
            featselection = "q",
-           remove.nonsig = F) {
-    
-  # # TROUBLE
-  # corr.df <-  microbe_cytokine_cors %>% 
-  #   filter(tissue == "StoolxColon",
-  #          condition == "Media") %>%
-  #   left_join(asv_labels %>% dplyr::rename(feature_A = feature))
-  #   trimfeats = F
+           remove.nonsig = FALSE) {
   
   if (trimfeats){
     if (featselection == "q"){ # most sig feats
@@ -438,7 +429,7 @@ corr_heatmap_16s_to_cyts <-
       corr.df.top.bugs <- corr.df %>% 
         dplyr::filter(q < 0.2) %>%
         slice_min(n = 50, order_by = q, with_ties = F)
-    } else if (featselection == "nq"){ # number of sig feats
+    } else if (featselection == "nq"){ 
       # Calculate number of significant (P-VALUE < 0.05) associations
       # and select top 30 features
       corr.df.top.mets <- corr.df %>%

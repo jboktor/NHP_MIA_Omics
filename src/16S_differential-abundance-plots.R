@@ -16,6 +16,7 @@ asv_labels <- ps_obj %>% tax_table() %>% as.data.frame() %>%
   rownames_to_column(var = "feature") %>% 
   mutate(asv_label = gsub("_NA", "", asv_label))
 
+
 maaslin2_stats <- readRDS(file = 'data/16S/differential-abundance/MaAsLin2/MaAsLin2_summary.rds')
 maaslin2_stats %>% glimpse()
 
@@ -78,43 +79,7 @@ maaslin2_stats_stool <-
         axis.ticks = element_blank())
 maaslin2_stats_stool
 
-
-
-
 ggsave(maaslin2_stats_all, 
        filename = "figures/16S/differential-abundance/maaslin2_stats_summary.svg", 
        width = 8, height = 7)
-
-
-
-
-# plot_df <- maaslin2_stats %>% 
-#   filter(metadata == "treatment",
-#          tissue == "Stool",
-#          feature_level == "ASVs") %>% 
-#   left_join(asv_labels) %>% 
-#   left_join(aucs)
-# plot_df_nonsig <- plot_df %>% filter(qval > 0.01 | abs(auroc-0.5) < .1)
-# plot_df_sig <- plot_df %>% filter(qval <= 0.01 & abs(auroc-0.5) > .1)
-# 
-# 
-# 
-# plot_df_nonsig %>% 
-#   ggplot() +
-#   geom_vline(xintercept = 0.5) +
-#   geom_hline(yintercept = -log10(0.05)) +
-#   geom_point(aes(x = auroc, y = -log10(qval + 1e-100)), color = "grey60") +
-#   geom_point(data = plot_df_sig,
-#              aes( x = auroc, y = -log10(qval + 1e-100), color = Phylum)) +
-#   my_clean_theme() +
-#   facet_wrap(~tissue, scales = "free") +
-#   labs(x = "AUROC", y = NULL) +
-#   scale_color_futurama() +
-#   theme(axis.text.y = element_text(size = 8),
-#         axis.ticks = element_blank())
-# 
-# 
-
-
-  
 

@@ -666,7 +666,7 @@ corr_heatmap_facet_behav <- function(corr.df,
 
 # _______________________________________________________________________________
 
-corr_heatmap_FDR <- function(df){
+corr_feature_tissue_FDR <- function(df){
   df %>% 
     group_by(feature_A) %>%
     mutate(q = p.adjust(p, method = 'BH')) %>%

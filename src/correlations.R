@@ -16,9 +16,7 @@ df_scaled_imp <-
   readRDS(file = "data/metabolomics/2022-07-05_scaled_imputed_abundance_annotated.rds")
 df_all <-
   readRDS(file = "data/metabolomics/2022-07-05_scaled_imputed_abundance.rds")
-pathway_map <- df_scaled_imp %>%
-  select(BIOCHEMICAL, `SUPER PATHWAY`, `SUB PATHWAY`) %>%
-  distinct()
+
 #_______________________________________________________________________________
 #                Metabolite x Metabolite Correlations --------
 #_______________________________________________________________________________
