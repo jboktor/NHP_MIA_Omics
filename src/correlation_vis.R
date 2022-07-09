@@ -3,44 +3,49 @@ source("src/_load_packages.R")
 source("src/_misc_functions.R")
 
 # Load data 
-df_corr_all <-
-  read_excel("data/correlations_metabolite-to-metabolite/all_metabolite_corrs.xlsx",
-             sheet = "Sheet 1")
-pathway_map <- read_excel("input_files/misc/pathway_map.xlsx", sheet = "Sheet 1")
-pathway_map_join <- pathway_map %>% dplyr::rename("feature_A" = "BIOCHEMICAL")
-pathway_map_sub2sup <- pathway_map %>% 
-  janitor::clean_names() %>% 
-  select(super_pathway, sub_pathway) %>% 
+pathway_map <-
+  read_excel("input_files/misc/pathway_map.xlsx", sheet = "Sheet 1")
+pathway_map_join <-
+  pathway_map %>% dplyr::rename("feature_A" = "BIOCHEMICAL")
+pathway_map_sub2sup <- pathway_map %>%
+  janitor::clean_names() %>%
+  select(super_pathway, sub_pathway) %>%
   distinct()
 #_______________________________________________________________________________
 #                           Loading Correlation data                        ---- 
 #_______________________________________________________________________________
 
-gi_media_allMets_fdr <-
-  read_excel("data/correlations_cytokine_metabolite/GI_Bioplex_Correlations.xlsx",
-             sheet = "GI_Media_allMets") %>% 
-  mutate(tissue_A_group = "GI")
+# gi_media_allMets_fdr <-
+#   read_excel("data/correlations_cytokine_metabolite/GI_Bioplex_Correlations.xlsx",
+#              sheet = "GI_Media_allMets") %>% 
+#   mutate(tissue_A_group = "GI")
+# 
+# brain_allMets_fdr <-
+#   read_excel("data/correlations_cytokine_metabolite/Brain_tissue_Bioplex_Correlations.xlsx",
+#              sheet = "Brain_tissue_allMets") %>% 
+#   mutate(tissue_A = if_else(grepl("PLASMA", tissue_A), paste0("Brain Plasma"), tissue_A)) %>% 
+#   mutate(tissue_A_group = "Brain")
+# 
+# plasma_media_allMets_fdr <-
+#   read_excel("data/correlations_cytokine_metabolite/Blood_Bioplex_Correlations.xlsx",
+#              sheet = "plasma_Media_allMets") %>% 
+#   mutate(tissue_A_group = "Plasma")
 
-brain_allMets_fdr <-
-  read_excel("data/correlations_cytokine_metabolite/Brain_tissue_Bioplex_Correlations.xlsx",
-             sheet = "Brain_tissue_allMets") %>% 
-  mutate(tissue_A = if_else(grepl("PLASMA", tissue_A), paste0("Brain Plasma"), tissue_A)) %>% 
-  mutate(tissue_A_group = "Brain")
+# cytokine_cors <- bind_rows(gi_media_allMets_fdr, brain_allMets_fdr, plasma_media_allMets_fdr)
 
-plasma_media_allMets_fdr <-
-  read_excel("data/correlations_cytokine_metabolite/Blood_Bioplex_Correlations.xlsx",
-             sheet = "plasma_Media_allMets") %>% 
-  mutate(tissue_A_group = "Plasma")
+cyt_to_mets <- 'data/correlations/cytokine-to-metabolite/'
+
+cytokine_cors <- readRDS(glue(
+  '{cyt_to_mets}/2022-07-06_cytokine-metabolite_correlations.rds'
+))
 
 behavior_all_mets_fdr <-
-  read_excel("data/correlations_behavior_metabolite/Behavior_Metabolite_Correlations.xlsx",
+  read_excel("data/correlations/behavior-to-metabolite/Behavior_Metabolite_Correlations.xlsx",
              sheet = "behaviors_allMetabolites")
 
-cytokine_cors <- bind_rows(gi_media_allMets_fdr, brain_allMets_fdr, plasma_media_allMets_fdr)
-
-allcytsources <- 
-  c("Plasma", "Brain Plasma",  "CSF", "CORTEX", "HIPP", "AC",
-  "Jejunum", "Ileum", "MLN", "Colon")
+cyt_tissues <- 
+  c("Plasma-PBMCs", "Plasma",  "CSF", "Cortex", "HIPP", "AC",
+  "Jejunum-PBMCs", "Ileum-PBMCs", "MLN-PBMCs", "Colon-PBMCs")
 
 plasma_cyt_cors <- 
   cytokine_cors %>% 
@@ -61,22 +66,22 @@ feces_cyt_cors <-
 #_______________________________________________________________________________
 #                    Tissue source specific Heatmaps  ----
 #_______________________________________________________________________________
-
-plasma_cyt_cors.plot <- corr_heatmap_facet_v2(plasma_cyt_cors, facet_ord =allcytsources)
-# ggsave(plasma_cyt_cors.plot, filename = "figures/correlations/heatmap_Plasma_allmets_allcytokines.svg",
-#        width = 25, height =5)
-plasma_cyt_cors.plot <- corr_heatmap_facet_v2(plasma_cyt_cors, facet_ord =allcytsources)
-# ggsave(plasma_cyt_cors.plot, filename = "figures/correlations/heatmap_Plasma_allmets_allcytokines.svg",
-#        width = 25, height =5)
-csf_cyt_cors.plot <- corr_heatmap_facet_v2(csf_cyt_cors, facet_ord =allcytsources)
-# ggsave(csf_cyt_cors.plot, filename = "figures/correlations/heatmap_CSF_allmets_allcytokines.svg",
-#        width = 25, height =4)
-GI_cyt_cors.plot <- corr_heatmap_facet_v2(GI_cyt_cors, facet_ord =allcytsources)
-# ggsave(GI_cyt_cors.plot, filename = "figures/correlations/heatmap_GI_allmets_allcytokines.svg",
-#        width = 25, height =6)
-feces_cyt_cors.plot <- corr_heatmap_facet_v2(feces_cyt_cors, facet_ord =allcytsources)
-# ggsave(feces_cyt_cors.plot, filename = "figures/correlations/heatmap_Feces_allmets_allcytokines.svg",
-#        width = 25, height =6)
+ 
+plasma_cyt_cors.plot <- corr_heatmap_facet_v2(plasma_cyt_cors, facet_ord =cyt_tissues)
+ggsave(plasma_cyt_cors.plot, filename = "figures/correlations/2022-07-05_heatmap_Plasma_allmets_allcytokines.svg",
+       width = 25, height =5)
+plasma_cyt_cors.plot <- corr_heatmap_facet_v2(plasma_cyt_cors, facet_ord =cyt_tissues)
+ggsave(plasma_cyt_cors.plot, filename = "figures/correlations/2022-07-05_heatmap_Plasma_allmets_allcytokines.svg",
+       width = 25, height =5)
+csf_cyt_cors.plot <- corr_heatmap_facet_v2(csf_cyt_cors, facet_ord =cyt_tissues)
+ggsave(csf_cyt_cors.plot, filename = "figures/correlations/2022-07-05_heatmap_CSF_allmets_allcytokines.svg",
+       width = 25, height =4)
+GI_cyt_cors.plot <- corr_heatmap_facet_v2(GI_cyt_cors, facet_ord =cyt_tissues)
+ggsave(GI_cyt_cors.plot, filename = "figures/correlations/2022-07-05_heatmap_GI_allmets_allcytokines.svg",
+       width = 25, height =6)
+feces_cyt_cors.plot <- corr_heatmap_facet_v2(feces_cyt_cors, facet_ord =cyt_tissues)
+ggsave(feces_cyt_cors.plot, filename = "figures/correlations/2022-07-05_heatmap_Feces_allmets_allcytokines.svg",
+       width = 25, height =6)
 
 
 #_______________________________________________________________________________
@@ -154,8 +159,6 @@ top_n_scatterplots(merged_data = merged_behav_data,
                    hitslist = behavior_hits, 
                    data_type = "Behavior_")
 
-
-
 #_______________________________________________________________________________
 #                Pathway Summary Stacked Barcharts            ---- 
 #_______________________________________________________________________________
@@ -163,15 +166,7 @@ top_n_scatterplots(merged_data = merged_behav_data,
 cytokine_cors_mapped <- cytokine_cors %>%
   dplyr::rename("BIOCHEMICAL" = "feature_B_obj") %>%
   left_join(pathway_map, by = "BIOCHEMICAL") %>%
-  janitor::clean_names() %>% 
-  mutate(feature_a_obj = toupper(feature_a_obj)) %>% 
-  mutate(feature_a_obj = str_replace(feature_a_obj, "IL-", "IL")) %>% 
-  mutate(feature_a_obj = str_replace(feature_a_obj, "GCSF", "G-CSF")) %>% 
-  mutate(feature_a_obj = str_replace(feature_a_obj, "IL12P40", "IL12p40")) %>% 
-  mutate(feature_a_obj = str_replace(feature_a_obj, "MCP1", "MCP-1")) %>% 
-  mutate(feature_a_obj = str_replace(feature_a_obj, "MIP-1A", "MIP1A")) %>% 
-  mutate(feature_a_obj = str_replace(feature_a_obj, "MCP1", "MCP-1")) %>% 
-  mutate(feature_a_obj = str_replace(feature_a_obj, "SCD40L", "sCD40L"))
+  janitor::clean_names() 
 
 corr_count_sup <- 
   cytokine_cors_mapped %>% 
@@ -210,7 +205,7 @@ supcount <-
        y = NULL, fill = NULL) +
   my_clean_theme() 
 
-ggsave(supcount, filename = "figures/correlations/pathway_enrichment/superpathway_cytokine_summary.png",
+ggsave(supcount, filename = glue('{path_enrich_loc}/2022-07-05_superpathway_cytokine_summary.png'),
        width = 9, height = 4)
 
 
@@ -226,7 +221,7 @@ subcount <-
        y = NULL, fill = NULL) +
   my_clean_theme()
 
-ggsave(subcount, filename = "figures/correlations/pathway_enrichment/subpathway_cytokine_summary.png",
+ggsave(subcount, filename = glue('{path_enrich_loc}/2022-07-05_subpathway_cytokine_summary.png'),
        width = 12, height = 12)
 
 
@@ -291,59 +286,64 @@ enrichment_df <- enrichment_df %>%
   dplyr::rename(sub_pathway = path) %>% 
   left_join(pathway_map_sub2sup, by = "sub_pathway")
 
-
-# Wrangling data format
+# # Wrangling data format
 cor_enrichment_df <- 
   enrichment_df %>% 
-  mutate(cytokine = if_else(grepl("M_", cytokine), 
-                                  paste0(gsub("M_", "", cytokine), "__Plasma"),  
-                                  cytokine)) %>% 
-  mutate(cytokine = if_else(grepl("GCSF_", cytokine),
-                            paste0(gsub("GCSF_", "protect_gransf_", cytokine)),
-                            cytokine)) %>%
-  mutate(cytokine = if_else(grepl("G-CSF_", cytokine),
-                            paste0(gsub("G-CSF_", "protect_gransf_", cytokine)),
-                            cytokine)) %>% 
-  mutate(cytokine = if_else(grepl("GM-CSF_", cytokine),
-                            paste0(gsub("GM-CSF_", "protect_monf_", cytokine)),
-                            cytokine)) %>% 
-  mutate(cytokine = if_else(grepl("GMCSF_", cytokine),
-                            paste0(gsub("GMCSF_", "protect_monf_", cytokine)),
-                            cytokine)) %>%
-  mutate(cytokine = if_else(grepl("CSF_", cytokine),
-                            paste0(gsub("CSF_", "", cytokine), "__CSF"),
-                            cytokine)) %>%
-  mutate(cytokine = if_else(grepl("protect_gransf_", cytokine),
-                            paste0(gsub("protect_gransf_", "G-CSF_", cytokine)),
-                            cytokine)) %>% 
-  mutate(cytokine = if_else(grepl("protect_monf_", cytokine),
-                            paste0(gsub("protect_monf_", "GM-CSF_", cytokine)),
-                            cytokine)) %>% 
-  mutate(cytokine = if_else(grepl("AC_", cytokine), 
-                            paste0(gsub("AC_", "", cytokine), "__Anterior Cingulate"),  # DOUBLE CHECK
-                            cytokine)) %>% 
-  mutate(cytokine = if_else(grepl("HIPP_", cytokine), 
-                            paste0(gsub("HIPP_", "", cytokine), "__Hippocampus"),  
-                            cytokine)) %>% 
-  mutate(cytokine = if_else(grepl("PLASMA_", cytokine), 
-                            paste0(gsub("PLASMA_", "", cytokine), "__Brain Plasma"),  
-                            cytokine)) %>% 
-  mutate(cytokine_feature = if_else(grepl("CORTEX_", cytokine), 
-                                    paste0(gsub("CORTEX_", "", cytokine), "__Cortex"),  
-                                  cytokine)) %>% 
-  separate(cytokine_feature, c("cytokine", "cytokine_origin"), sep = "__", remove = F) %>% 
-  mutate(cytokine = toupper(cytokine)) %>% 
-  mutate(cytokine = str_replace(cytokine, "IL-", "IL")) %>% 
-  mutate(cytokine = str_replace(cytokine, "GCSF", "G-CSF")) %>% 
-  mutate(cytokine = str_replace(cytokine, "IL12P40", "IL12p40")) %>% 
-  mutate(cytokine = str_replace(cytokine, "MCP1", "MCP-1")) %>% 
-  mutate(cytokine = str_replace(cytokine, "MIP-1A", "MIP1A")) %>% 
-  mutate(cytokine = str_replace(cytokine, "MCP1", "MCP-1")) %>% 
-  mutate(cytokine = str_replace(cytokine, "SCD40L", "sCD40L")) %>% 
-  dplyr::rename(metabolite_origin = tissue)
+  dplyr::rename(metabolite_origin = tissue) %>% 
+  separate(cytokine, into = c('cytokine', 'cytokine_origin'), sep = '__')
 
-# write.xlsx(cor_enrichment_df,
-#            'data/correlations_cytokine_metabolite/cytokine_correlation_pathway_enrichment_analysis.xlsx')
+# # Wrangling data format
+# cor_enrichment_df <- 
+#   enrichment_df %>% 
+#   mutate(cytokine = if_else(grepl("M_", cytokine), 
+#                                   paste0(gsub("M_", "", cytokine), "__Plasma"),  
+#                                   cytokine)) %>% 
+#   mutate(cytokine = if_else(grepl("GCSF_", cytokine),
+#                             paste0(gsub("GCSF_", "protect_gransf_", cytokine)),
+#                             cytokine)) %>%
+#   mutate(cytokine = if_else(grepl("G-CSF_", cytokine),
+#                             paste0(gsub("G-CSF_", "protect_gransf_", cytokine)),
+#                             cytokine)) %>% 
+#   mutate(cytokine = if_else(grepl("GM-CSF_", cytokine),
+#                             paste0(gsub("GM-CSF_", "protect_monf_", cytokine)),
+#                             cytokine)) %>% 
+#   mutate(cytokine = if_else(grepl("GMCSF_", cytokine),
+#                             paste0(gsub("GMCSF_", "protect_monf_", cytokine)),
+#                             cytokine)) %>%
+#   mutate(cytokine = if_else(grepl("CSF_", cytokine),
+#                             paste0(gsub("CSF_", "", cytokine), "__CSF"),
+#                             cytokine)) %>%
+#   mutate(cytokine = if_else(grepl("protect_gransf_", cytokine),
+#                             paste0(gsub("protect_gransf_", "G-CSF_", cytokine)),
+#                             cytokine)) %>% 
+#   mutate(cytokine = if_else(grepl("protect_monf_", cytokine),
+#                             paste0(gsub("protect_monf_", "GM-CSF_", cytokine)),
+#                             cytokine)) %>% 
+#   mutate(cytokine = if_else(grepl("AC_", cytokine), 
+#                             paste0(gsub("AC_", "", cytokine), "__Anterior Cingulate"),  # DOUBLE CHECK
+#                             cytokine)) %>% 
+#   mutate(cytokine = if_else(grepl("HIPP_", cytokine), 
+#                             paste0(gsub("HIPP_", "", cytokine), "__Hippocampus"),  
+#                             cytokine)) %>% 
+#   mutate(cytokine = if_else(grepl("PLASMA_", cytokine), 
+#                             paste0(gsub("PLASMA_", "", cytokine), "__Brain Plasma"),  
+#                             cytokine)) %>% 
+#   mutate(cytokine_feature = if_else(grepl("CORTEX_", cytokine), 
+#                                     paste0(gsub("CORTEX_", "", cytokine), "__Cortex"),  
+#                                   cytokine)) %>% 
+#   separate(cytokine_feature, c("cytokine", "cytokine_origin"), sep = "__", remove = F) %>% 
+#   mutate(cytokine = toupper(cytokine)) %>% 
+#   mutate(cytokine = str_replace(cytokine, "IL-", "IL")) %>% 
+#   mutate(cytokine = str_replace(cytokine, "GCSF", "G-CSF")) %>% 
+#   mutate(cytokine = str_replace(cytokine, "IL12P40", "IL12p40")) %>% 
+#   mutate(cytokine = str_replace(cytokine, "MCP1", "MCP-1")) %>% 
+#   mutate(cytokine = str_replace(cytokine, "MIP-1A", "MIP1A")) %>% 
+#   mutate(cytokine = str_replace(cytokine, "MCP1", "MCP-1")) %>% 
+#   mutate(cytokine = str_replace(cytokine, "SCD40L", "sCD40L")) %>% 
+#   dplyr::rename(metabolite_origin = tissue)
+
+# write.xlsx(cor_enrichment_df, 
+#            file = 'data/correlations_cytokine_metabolite/2022-07-08_cytokine_correlation_pathway-enrichment-analysis.xlsx')
 
 
 
@@ -362,31 +362,8 @@ enrichment_df_labels <-
   slice_min(order_by = enrichment, n = 5)
 
 
-bubble_plot <- 
-  enrichment_df_nonsig %>% 
-  ggplot() +
-  geom_point(aes(x=k/m, y = -log10(enrichment), size =-log10(enrichment )), 
-             fill = "#525252", alpha = 0.05 ) +
-  geom_point(data = enrichment_df_trim, 
-             aes(x=k/m, y = -log10(enrichment ), size =-log10(enrichment ), 
-                 fill = super_pathway), alpha = 0.7, shape=21, color = "#393939", stroke = 0.25) +
-  facet_wrap(~metabolite_origin, scales = "free") +
-  scale_fill_manual(values = super_pathway_cols) +
-  labs(x="Significant Pathway Elements (k) / Total Pathway Elements (m)",
-       y = expression(paste(-log[10], "[ enrichment statistic ]"))) +
-  my_clean_theme() +
-  geom_text_repel(data = enrichment_df_labels,
-  aes(x=k/m, y = -log10(enrichment ), label = sub_pathway),
-  direction = "x",
-  angle = 90,
-  nudge_y = 1,
-  vjust = 0, force = 3, size = 2.5)
-bubble_plot
 
-ggsave(bubble_plot, filename = "figures/correlations/pathway_enrichment/bubble_plot_all.svg",
-       width = 12, height = 9)
-
-
+# Function to display bubble plots
 pathway_enrichment_bubbleplot <- function(cor_enrichment_df, tissue, ynudge = 0.5){
   
   # Tissue Specific bubble plot ----
@@ -435,25 +412,46 @@ pathway_enrichment_bubbleplot <- function(cor_enrichment_df, tissue, ynudge = 0.
   print(plot);return(plot)
 }
 
-plasma_bubble <- pathway_enrichment_bubbleplot(cor_enrichment_df = cor_enrichment_df, tissue = "Plasma", ynudge = 0.7)
-csf_bubble <- pathway_enrichment_bubbleplot(cor_enrichment_df = cor_enrichment_df, tissue = "CSF")
-ileum_bubble <- pathway_enrichment_bubbleplot(cor_enrichment_df = cor_enrichment_df, tissue = "Ileum")
-jejunum_bubble <- pathway_enrichment_bubbleplot(cor_enrichment_df = cor_enrichment_df, tissue = "Jejunum")
-colon_bubble <- pathway_enrichment_bubbleplot(cor_enrichment_df = cor_enrichment_df, tissue = "Colon")
-feces_bubble <- pathway_enrichment_bubbleplot(cor_enrichment_df = cor_enrichment_df, tissue = "Feces")
+plasma_bubble <-
+  pathway_enrichment_bubbleplot(cor_enrichment_df = cor_enrichment_df,
+                                tissue = "Plasma",
+                                ynudge = 0.7)
+csf_bubble <-
+  pathway_enrichment_bubbleplot(cor_enrichment_df = cor_enrichment_df, 
+                                tissue = "CSF")
+ileum_bubble <-
+  pathway_enrichment_bubbleplot(cor_enrichment_df = cor_enrichment_df, 
+                                tissue = "Ileum")
+jejunum_bubble <-
+  pathway_enrichment_bubbleplot(cor_enrichment_df = cor_enrichment_df, 
+                                tissue = "Jejunum")
+colon_bubble <-
+  pathway_enrichment_bubbleplot(cor_enrichment_df = cor_enrichment_df, 
+                                tissue = "Colon")
+feces_bubble <-
+  pathway_enrichment_bubbleplot(cor_enrichment_df = cor_enrichment_df, 
+                                tissue = "Feces")
 
 
-ggsave(plasma_bubble, filename = "figures/correlations/pathway_enrichment/bubble_plot_Plasma.svg",
+path_enrich_loc <- c('figures/correlations/pathway_enrichment')
+
+ggsave(plasma_bubble, 
+       filename = glue('{path_enrich_loc}/2022-07-05_bubble_plot_Plasma.svg'),
        width = 6.5, height = 5.75)
-ggsave(csf_bubble, filename = "figures/correlations/pathway_enrichment/bubble_plot_CSF.svg",
+ggsave(csf_bubble, 
+       filename = glue('{path_enrich_loc}/022-07-05_bubble_plot_CSF.svg'),
        width = 5.4, height = 5.75)
-ggsave(ileum_bubble, filename = "figures/correlations/pathway_enrichment/bubble_plot_Ileum.svg",
+ggsave(ileum_bubble, 
+       filename = glue('{path_enrich_loc}/022-07-05_bubble_plot_Ileum.svg'),
        width = 6.25, height = 5.75)
-ggsave(jejunum_bubble, filename = "figures/correlations/pathway_enrichment/bubble_plot_Jejunum.svg",
+ggsave(jejunum_bubble, 
+       filename = glue('{path_enrich_loc}/022-07-05_bubble_plot_Jejunum.svg'),
        width = 6.25, height = 5.75)
-ggsave(colon_bubble, filename = "figures/correlations/pathway_enrichment/bubble_plot_Colon.svg",
+ggsave(colon_bubble, 
+       filename = glue('{path_enrich_loc}/022-07-05_bubble_plot_Colon.svg'),
        width = 6, height = 5.75)
-ggsave(feces_bubble, filename = "figures/correlations/pathway_enrichment/bubble_plot_Feces.svg",
+ggsave(feces_bubble, 
+       filename = glue('{path_enrich_loc}/022-07-05_bubble_plot_Feces.svg'),
        width = 6, height = 5.75)
 
 
@@ -473,7 +471,9 @@ sup_enrichment <-
        y = NULL, fill = NULL) +
   my_clean_theme() 
 
-ggsave(sup_enrichment, filename = "figures/correlations/pathway_enrichment/superpathway_cytokine_enrichment_summary.png",
+ggsave(sup_enrichment, 
+       filename = 
+         glue('{path_enrich_loc}/2022-07-05_superpathway_cytokine_enrichment_summary.png'),
        width = 9, height = 4)
 
 
@@ -492,7 +492,8 @@ sub_enrichment <-
   my_clean_theme() +
   theme(strip.text.y.right = element_text(angle = 0))
 
-ggsave(sub_enrichment, filename = "figures/correlations/pathway_enrichment/subpathway_cytokine_enrichment_summary_new.svg",
+ggsave(sub_enrichment, 
+filename = glue('{path_enrich_loc}/2022-07-05_subpathway_cytokine_enrichment_summary_new.svg'),
        width = 12, height = 12)
 
 
@@ -532,17 +533,23 @@ colon_subpath_enriched <-
 feces_subpath_enriched <- 
   tissue_enrichment_subpaths(df = cor_enrichment_df, tissue = "Feces")
 
-ggsave(plasma_subpath_enriched, filename = "figures/correlations/pathway_enrichment/subpath_barplot_Plasma.svg",
+ggsave(plasma_subpath_enriched, 
+       filename = glue('{path_enrich_loc}/2022-07-05_subpath_barplot_Plasma.svg'),
        width = 7, height = 3)
-ggsave(csf_subpath_enriched, filename = "figures/correlations/pathway_enrichment/subpath_barplot_CSF.svg",
+ggsave(csf_subpath_enriched, 
+       filename = glue('{path_enrich_loc}/2022-07-05_subpath_barplot_CSF.svg'),
        width = 7, height = 1.5)
-ggsave(jejunum_subpath_enriched, filename = "figures/correlations/pathway_enrichment/subpath_barplot_Jejunum.svg",
+ggsave(jejunum_subpath_enriched, 
+       filename = glue('{path_enrich_loc}/2022-07-05_subpath_barplot_Jejunum.svg'),
        width = 7, height = 7)
-ggsave(ileum_subpath_enriched, filename = "figures/correlations/pathway_enrichment/subpath_barplot_Ileum.svg",
+ggsave(ileum_subpath_enriched, 
+       filename = glue('{path_enrich_loc}/2022-07-05_subpath_barplot_Ileum.svg'),
        width = 7, height = 9)
-ggsave(colon_subpath_enriched, filename = "figures/correlations/pathway_enrichment/subpath_barplot_Colon.svg",
+ggsave(colon_subpath_enriched, 
+       filename = glue('{path_enrich_loc}/2022-07-05_subpath_barplot_Colon.svg'),
        width = 7, height = 2.5)
-ggsave(feces_subpath_enriched, filename = "figures/correlations/pathway_enrichment/subpath_barplot_Feces.svg",
+ggsave(feces_subpath_enriched, 
+       filename = glue('{path_enrich_loc}/2022-07-05_subpath_barplot_Feces.svg'),
        width = 7, height = 4)
 
 
@@ -608,7 +615,7 @@ ggsave(feces_subpath_enriched, filename = "figures/correlations/pathway_enrichme
 # cor_avg_summary_subpath
 # 
 # ggsave(cor_avg_summary_subpath, filename = 
-#          "figures/correlations/cor_avg_summary_subpath.png", 
+#          "figures/correlations/2022-07-05_cor_avg_summary_subpath.png", 
 #        width = 14, height = 8)
 # 
 # 
