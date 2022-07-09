@@ -315,11 +315,3 @@ df_heatmap_female_treatment_output <-
 #            'data/summary_info/tissue_shared_metabolites_MALE_polyic.vs.saline_significant.xlsx')
 # write.xlsx(df_heatmap_female_treatment_output,
 #            'data/summary_info/tissue_shared_metabolites_FEMALE_polyic.vs.saline_significant.xlsx')
-
-
-
-
-
-
-
-
