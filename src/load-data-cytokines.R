@@ -4,50 +4,57 @@ source("src/_misc_functions.R")
 
 #' This script imputes cytokine profiles for downstream analyses
 
-sample_meta <- read_xlsx('input_files/misc/sample_keys.xlsx', sheet = 'keys') 
-meta_animal_id <- sample_meta %>% 
-  select(subject_id, SampleID) %>% 
-  dplyr::rename("Animal" = "subject_id" )
+sample_meta <- read_xlsx("input_files/misc/sample_keys.xlsx", sheet = "keys")
+meta_animal_id <- sample_meta %>%
+  select(subject_id, SampleID) %>%
+  dplyr::rename("Animal" = "subject_id")
 
-#_______________________________________________________________________________
+# _______________________________________________________________________________
 # Collate clean post-processed cytokine profiles for supplement ----
 
 # GI Cytokine Profiles  --
 df_GI_media <-
-  read_xlsx('input_files/Behavior_Immune_data/AMA 27 GI tissues media 072513.xlsx',
-            sheet = 'Sheet1') %>%
+  read_xlsx("input_files/Behavior_Immune_data/AMA 27 GI tissues media 072513.xlsx",
+    sheet = "Sheet1"
+  ) %>%
   select(-c(Gender, Study_group, Description)) %>%
   pivot_longer(!c(Animal, `GI Section`), names_to = "cytokine") %>%
   separate(cytokine, c("cytokine", "trash"), sep = " ") %>%
   select(-trash) %>%
   right_join(meta_animal_id, by = "Animal") %>%
   dplyr::rename(Tissue = `GI Section`) %>%
-  mutate(cytokine = toupper(cytokine),
-         cytokine = gsub('\\-', '', cytokine),
-         Tissue = glue('{Tissue}-PBMCs')) %>%
+  mutate(
+    cytokine = toupper(cytokine),
+    cytokine = gsub("\\-", "", cytokine),
+    Tissue = glue("{Tissue}-PBMCs")
+  ) %>%
   drop_na(cytokine) %>%
   pivot_wider(names_from = "cytokine", values_from = "value")
 
 # Brain Cytokine Profiles
 df_brain_media <-
-  read_xlsx('input_files/Behavior_Immune_data/AMA27 - brain cytokines.xlsx',
-            sheet = 'Sheet1') %>%
+  read_xlsx("input_files/Behavior_Immune_data/AMA27 - brain cytokines.xlsx",
+    sheet = "Sheet1"
+  ) %>%
   select(-c(Study, Study_group)) %>%
   pivot_longer(!Animal, names_to = "cytokine_longname") %>%
   mutate(cytokine_longname = gsub("_y4", "", cytokine_longname)) %>%
   separate(cytokine_longname, c("Tissue", "cytokine"), sep = "_") %>%
-  mutate(Tissue = toupper(Tissue)) %>% 
+  mutate(Tissue = toupper(Tissue)) %>%
   mutate(cytokine = toupper(cytokine)) %>%
   pivot_wider(names_from = "cytokine", values_from = "value") %>%
   right_join(meta_animal_id, by = "Animal") %>%
   relocate(SampleID, .after = Tissue) %>%
-  mutate(Tissue = gsub('PLASMA', 'Plasma', Tissue),
-         Tissue = gsub('CORTEX', 'Cortex', Tissue) )
+  mutate(
+    Tissue = gsub("PLASMA", "Plasma", Tissue),
+    Tissue = gsub("CORTEX", "Cortex", Tissue)
+  )
 
 # Plasma Profiles
 df_plasma_media <-
-  read_xlsx('input_files/Behavior_Immune_data/Year 4 Blood Cytokine data.xlsx',
-            sheet = 'Media') %>%
+  read_xlsx("input_files/Behavior_Immune_data/Year 4 Blood Cytokine data.xlsx",
+    sheet = "Media"
+  ) %>%
   select(-c(Gender, treatment)) %>%
   pivot_longer(!Animal, names_to = "cytokine") %>%
   mutate(cytokine = gsub("m_y4_", "", cytokine)) %>%
@@ -59,62 +66,62 @@ df_plasma_media <-
   relocate(SampleID, .after = Tissue)
 
 # Join all cytokine tables
-all_cytokines <- 
+all_cytokines <-
   bind_rows(
     df_GI_media,
     df_brain_media,
     df_plasma_media
   )
 
-# Millipore PCYTMG-40k-PX23 Assay sensitivities 
+# Millipore PCYTMG-40k-PX23 Assay sensitivities
 # (minimum detectable conc.) minDC (pg/mL) Average + 2SD
 
-cytokine_lods <- 
+cytokine_lods <-
   tribble(
-  ~cytokine, ~LOD_min, 
-  "IL4", 3.1,
-  "IL10", 6.4,
-  "IL18", 6.1,
-  "SCD40L",  2.1,
-  "TNFA",  1.6,
-  "GMCSF", 1.8,
-  "GCSF", 2.1,
-  "IFNG",  1.6,
-  "IL1RA",  2.4,
-  "IL1B", 1.2,
-  "IL2", 2.1,
-  "IL5", 1.5,
-  "IL6", 1.6,
-  "IL8", 1.1,
-  "IL12P40", 1.5,
-  "IL13",  5.8,
-  "IL15",  0.5,
-  "IL17",  1.3,
-  "MCP1",  3.1,
-  "MIP1A",  4.9,
-  "MIP1B",  1.6,
-  "TGFA",  1.1,
-  "VEGF",  13.6
-)
+    ~cytokine, ~LOD_min,
+    "IL4", 3.1,
+    "IL10", 6.4,
+    "IL18", 6.1,
+    "SCD40L", 2.1,
+    "TNFA", 1.6,
+    "GMCSF", 1.8,
+    "GCSF", 2.1,
+    "IFNG", 1.6,
+    "IL1RA", 2.4,
+    "IL1B", 1.2,
+    "IL2", 2.1,
+    "IL5", 1.5,
+    "IL6", 1.6,
+    "IL8", 1.1,
+    "IL12P40", 1.5,
+    "IL13", 5.8,
+    "IL15", 0.5,
+    "IL17", 1.3,
+    "MCP1", 3.1,
+    "MIP1A", 4.9,
+    "MIP1B", 1.6,
+    "TGFA", 1.1,
+    "VEGF", 13.6
+  )
 
 cytokine_lods %<>%
-  mutate(impute_val = LOD_min/2)
+  mutate(impute_val = LOD_min / 2)
 
-# Calculate the total number of measurements per tissue 
+# Calculate the total number of measurements per tissue
 # 1) in total and 2) requiring imputation
 
-lod_stats  <- tibble()
+lod_stats <- tibble()
 
 for (cyt in cytokine_lods$cytokine) {
-  lod <- cytokine_lods %>% 
-    filter(cytokine == cyt) %>% 
+  lod <- cytokine_lods %>%
+    filter(cytokine == cyt) %>%
     pull(LOD_min)
-  
+
   lod_stats2add <-
     all_cytokines %>%
     select(Tissue, all_of(cyt)) %>%
     drop_na(all_of(cyt)) %>%
-    mutate(above_LOD = if_else(.data[[cyt]] >=  lod, TRUE, FALSE)) %>%
+    mutate(above_LOD = if_else(.data[[cyt]] >= lod, TRUE, FALSE)) %>%
     group_by(Tissue) %>%
     dplyr::summarize(
       total_samples = n(),
@@ -122,31 +129,31 @@ for (cyt in cytokine_lods$cytokine) {
       samples_below_lod = total_samples - samples_above_lod
     ) %>%
     mutate(cytokine = cyt)
-  
+
   lod_stats %<>% bind_rows(lod_stats2add)
-  
 }
 
-# Tissue cytokines with fewer than 5 measurements 
+# Tissue cytokines with fewer than 5 measurements
 blacklist <-
-  lod_stats %>% filter(samples_above_lod < 5) %>% 
-  mutate(tissue_cyt = glue('{Tissue}_{cytokine}'))
+  lod_stats %>%
+  filter(samples_above_lod < 5) %>%
+  mutate(tissue_cyt = glue("{Tissue}_{cytokine}"))
 
-all_cytokines_trimmed <- 
-  all_cytokines %>% 
-  pivot_longer(!c(Animal, Tissue, SampleID), names_to = 'cytokine') %>% 
-  mutate(tissue_cyt = glue('{Tissue}_{cytokine}')) %>% 
-  filter(tissue_cyt %nin% blacklist$tissue_cyt) %>% 
+all_cytokines_trimmed <-
+  all_cytokines %>%
+  pivot_longer(!c(Animal, Tissue, SampleID), names_to = "cytokine") %>%
+  mutate(tissue_cyt = glue("{Tissue}_{cytokine}")) %>%
+  filter(tissue_cyt %nin% blacklist$tissue_cyt) %>%
   select(-tissue_cyt)
 
 
 # How many cytokines are measures in each tissue after removal of cytokines with low readouts?
 
-cytokines_per_tissue <- 
-  all_cytokines_trimmed %>% 
-  select(Tissue, cytokine) %>% 
-  distinct() %>% 
-  group_by(Tissue) %>% 
+cytokines_per_tissue <-
+  all_cytokines_trimmed %>%
+  select(Tissue, cytokine) %>%
+  distinct() %>%
+  group_by(Tissue) %>%
   dplyr::summarise(n = n())
 cytokines_per_tissue
 
@@ -163,16 +170,16 @@ cytokines_per_tissue
 # 9 Plasma            22
 # 10 Plasma - PBMCs   23
 
-# How many times is each cytokine measured in a tissue successfully? 
+# How many times is each cytokine measured in a tissue successfully?
 
-cytokine_prevalence <- 
-  all_cytokines_trimmed %>% 
-  select(Tissue, cytokine) %>% 
-  distinct() %>% 
-  group_by(cytokine) %>% 
+cytokine_prevalence <-
+  all_cytokines_trimmed %>%
+  select(Tissue, cytokine) %>%
+  distinct() %>%
+  group_by(cytokine) %>%
   dplyr::summarise(n = n())
 
-cytokine_prevalence %>% print(n=Inf)
+cytokine_prevalence %>% print(n = Inf)
 
 # A tibble: 23 × 2
 # cytokine     n
@@ -200,25 +207,23 @@ cytokine_prevalence %>% print(n=Inf)
 # 22 TNFA         6
 # 23 VEGF         9
 
-#_______________________________________________________________________________
+# _______________________________________________________________________________
 # Imputation ----
-# replace cytokine measurements below the LOD with 1/2 LOD 
+# replace cytokine measurements below the LOD with 1/2 LOD
 
 all_cytokines_trimmed_imputed <- all_cytokines_trimmed
 
 for (cyt in cytokine_lods$cytokine) {
-  
   print(cyt)
   cyt_thres <- cytokine_lods %>% filter(cytokine == cyt)
   lod <- cyt_thres$LOD_min
   impute <- cyt_thres$impute_val
-  
-  all_cytokines_trimmed_imputed %<>% 
+
+  all_cytokines_trimmed_imputed %<>%
     mutate(value = case_when(
       (cytokine == cyt & value < lod & !is.na(value)) ~ impute,
       TRUE ~ value
     ))
-  
 }
 
 
@@ -231,29 +236,23 @@ imputation_summary_stats <- list(
 )
 
 write.xlsx(imputation_summary_stats,
-           'data/cytokines/2022-07-05_cytokine-summary-qc.xlsx',
-           overwrite = T)
+  "data/cytokines/2022-07-05_cytokine-summary-qc.xlsx",
+  overwrite = T
+)
 
 # Save filtered and imputed data ----
 cytokine_profiles <- list(
   "imputed" = all_cytokines_trimmed_imputed,
-  "raw" = all_cytokines %>% 
-    pivot_longer(!c(Animal, Tissue, SampleID), names_to = 'cytokine')
-  )
+  "raw" = all_cytokines %>%
+    pivot_longer(!c(Animal, Tissue, SampleID), names_to = "cytokine")
+)
 
 write.xlsx(
   cytokine_profiles,
-  'data/cytokines/2022-07-05_cytokine-profiles.xlsx',
+  "data/cytokines/2022-07-05_cytokine-profiles.xlsx",
   overwrite = T
 )
 
 saveRDS(all_cytokines_trimmed_imputed,
-        file = 'data/cytokines/2022-07-05_cytokine-profiles_imputed.rds')
-
-
-
-
-
-
-
-
+  file = "data/cytokines/2022-07-05_cytokine-profiles_imputed.rds"
+)

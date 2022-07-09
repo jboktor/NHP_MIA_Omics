@@ -8,16 +8,18 @@ source("src/_16S_functions.R")
 ps_obj <- readRDS(file = "data/16S/phyloseq.rds")
 # aucs <- readRDS(file = "data/16S/differential-abundance/feature_AUROCs_treatment.rds")
 
-#_______________________________________________________________________________ 
+# _______________________________________________________________________________
 # MaAsLin2 ----
 
-asv_labels <- ps_obj %>% tax_table() %>% as.data.frame() %>% 
-  unite('asv_label', Family:Species) %>% 
-  rownames_to_column(var = "feature") %>% 
+asv_labels <- ps_obj %>%
+  tax_table() %>%
+  as.data.frame() %>%
+  unite("asv_label", Family:Species) %>%
+  rownames_to_column(var = "feature") %>%
   mutate(asv_label = gsub("_NA", "", asv_label))
 
 
-maaslin2_stats <- readRDS(file = 'data/16S/differential-abundance/MaAsLin2/MaAsLin2_summary.rds')
+maaslin2_stats <- readRDS(file = "data/16S/differential-abundance/MaAsLin2/MaAsLin2_summary.rds")
 maaslin2_stats %>% glimpse()
 
 maaslin2_stats %>%
@@ -25,61 +27,74 @@ maaslin2_stats %>%
     tissue == "Stool",
     metadata == "treatment",
     feature_level == "ASVs",
-    qval <= 0.1) %>% 
+    qval <= 0.1
+  ) %>%
   nrow()
 
-maaslin2_stats_all <- 
-  maaslin2_stats %>% 
-  filter(metadata == "treatment",
-         feature_level == "ASVs",
-         qval <= 0.1) %>% 
-  left_join(asv_labels) %>% 
-  left_join(aucs) %>% 
+maaslin2_stats_all <-
+  maaslin2_stats %>%
+  filter(
+    metadata == "treatment",
+    feature_level == "ASVs",
+    qval <= 0.1
+  ) %>%
+  left_join(asv_labels) %>%
+  left_join(aucs) %>%
   group_by(tissue) %>%
-  # slice_min(n = 30, order_by = qval, with_ties = F) %>% 
-  ggplot(aes(y = reorder(asv_label, coef),
-             x = coef,
-             xmin = coef - stderr, 
-             xmax = coef + stderr,
-             color = Phylum)) +
+  # slice_min(n = 30, order_by = qval, with_ties = F) %>%
+  ggplot(aes(
+    y = reorder(asv_label, coef),
+    x = coef,
+    xmin = coef - stderr,
+    xmax = coef + stderr,
+    color = Phylum
+  )) +
   geom_vline(xintercept = 0, linetype = 2, alpha = 0.4) +
-  geom_errorbar(width=0.6, size = 0.6) +
+  geom_errorbar(width = 0.6, size = 0.6) +
   my_clean_theme() +
   facet_grid(rows = vars(tissue), scales = "free", space = "free") +
   labs(x = "Regression coefficient [Poly(I:C) / Control]", y = NULL) +
   scale_color_d3() +
   geom_point(size = 0.6) +
-  theme(axis.text.y = element_text(size = 8),
-        axis.ticks = element_blank())
+  theme(
+    axis.text.y = element_text(size = 8),
+    axis.ticks = element_blank()
+  )
 maaslin2_stats_all
 
 
-maaslin2_stats_stool <- 
-  maaslin2_stats %>% 
-  filter(metadata == "treatment",
-         tissue == "Stool",
-         feature_level == "ASVs",
-         qval <= 0.1) %>% 
-  left_join(asv_labels) %>% 
-  left_join(aucs) %>% 
+maaslin2_stats_stool <-
+  maaslin2_stats %>%
+  filter(
+    metadata == "treatment",
+    tissue == "Stool",
+    feature_level == "ASVs",
+    qval <= 0.1
+  ) %>%
+  left_join(asv_labels) %>%
+  left_join(aucs) %>%
   group_by(tissue) %>%
-  ggplot(aes(y = reorder(asv_label, coef),
-             x = coef,
-             xmin = coef - stderr, 
-             xmax = coef + stderr,
-             color = Phylum)) +
+  ggplot(aes(
+    y = reorder(asv_label, coef),
+    x = coef,
+    xmin = coef - stderr,
+    xmax = coef + stderr,
+    color = Phylum
+  )) +
   geom_vline(xintercept = 0, linetype = 2, alpha = 0.4) +
-  geom_errorbar(width=0.6, size = 0.6) +
+  geom_errorbar(width = 0.6, size = 0.6) +
   my_clean_theme() +
   # facet_grid(rows = vars(tissue), scales = "free", space = "free") +
   labs(x = "Regression coefficient [Poly(I:C) / Control]", y = NULL) +
   scale_color_d3() +
   geom_point(size = 0.6) +
-  theme(axis.text.y = element_text(size = 8),
-        axis.ticks = element_blank())
+  theme(
+    axis.text.y = element_text(size = 8),
+    axis.ticks = element_blank()
+  )
 maaslin2_stats_stool
 
-ggsave(maaslin2_stats_all, 
-       filename = "figures/16S/differential-abundance/maaslin2_stats_summary.svg", 
-       width = 8, height = 7)
-
+ggsave(maaslin2_stats_all,
+  filename = "figures/16S/differential-abundance/maaslin2_stats_summary.svg",
+  width = 8, height = 7
+)

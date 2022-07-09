@@ -5,8 +5,8 @@ source("src/_misc_functions.R")
 # Behavioral data ----
 df_behavior_postwean <-
   read_xlsx(
-    'input_files/Behavior_Immune_data/LongStereo - Year four stereotyped behaviors.xlsx',
-    sheet = 'PostWeanStereowithCodes'
+    "input_files/Behavior_Immune_data/LongStereo - Year four stereotyped behaviors.xlsx",
+    sheet = "PostWeanStereowithCodes"
   ) %>%
   select(-c(COHORT, FOCALDYE, GENDER, EXPCODE, EXPCODE2)) %>%
   pivot_longer(!c(Animal, Observation), names_to = "behavior") %>%
@@ -16,8 +16,8 @@ df_behavior_postwean <-
 
 df_behavior_juvenile <-
   read_xlsx(
-    'input_files/Behavior_Immune_data/LongStereo - Year four stereotyped behaviors.xlsx',
-    sheet = 'JuvStereowithCodes'
+    "input_files/Behavior_Immune_data/LongStereo - Year four stereotyped behaviors.xlsx",
+    sheet = "JuvStereowithCodes"
   ) %>%
   select(-c(COHORT, FOCALDYE, GENDER, EXPCODE, EXPCODE2)) %>%
   pivot_longer(!c(Animal, Observation), names_to = "behavior") %>%
@@ -27,8 +27,8 @@ df_behavior_juvenile <-
 
 df_behavior_adult <-
   read_xlsx(
-    'input_files/Behavior_Immune_data/LongStereo - Year four stereotyped behaviors.xlsx',
-    sheet = 'SubAdultwithCodes'
+    "input_files/Behavior_Immune_data/LongStereo - Year four stereotyped behaviors.xlsx",
+    sheet = "SubAdultwithCodes"
   ) %>%
   select(-c(GENDER, EXPCODE, EXPCODE2)) %>%
   pivot_longer(!c(Animal, Observation), names_to = "behavior") %>%
@@ -39,9 +39,11 @@ df_behavior_adult <-
 
 # Data frame for exploration of behavior data
 df_behav_eda <-
-  bind_rows(df_behavior_postwean,
-            df_behavior_juvenile,
-            df_behavior_adult)
+  bind_rows(
+    df_behavior_postwean,
+    df_behavior_juvenile,
+    df_behavior_adult
+  )
 
 df_behavior <- df_behav_eda %>%
   select(SampleID, value, behavior__timepoint) %>%
@@ -49,9 +51,9 @@ df_behavior <- df_behav_eda %>%
   arrange(match(SampleID, rownames(df_all))) %>%
   column_to_rownames(var = "SampleID")
 
-behavior_data <- list("df_behavior" = df_behavior,
-                      "df_behav_eda" = df_behav_eda)
+behavior_data <- list(
+  "df_behavior" = df_behavior,
+  "df_behav_eda" = df_behav_eda
+)
 
 saveRDS(behavior_data, file = "data/behaviors/2022-07-05_behaviors.rds")
-
-

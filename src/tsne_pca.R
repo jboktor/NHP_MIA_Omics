@@ -2,36 +2,36 @@
 source("src/_load_packages.R")
 source("src/_misc_functions.R")
 
-# This script generates tSNE and PCA ordination plots for all samples 
+# This script generates tSNE and PCA ordination plots for all samples
 
-plasmaInd <- read_xlsx('input_files/Metabolomics/NHP Plasma HD4 Metabolon.xlsx', sheet = 'ScaledImpData')
+plasmaInd <- read_xlsx("input_files/Metabolomics/NHP Plasma HD4 Metabolon.xlsx", sheet = "ScaledImpData")
 plasmaInd <- plasmaInd[-2:-3]
-plasma_labs <- c("BIOCHEMICAL", paste0(colnames(plasmaInd[2:24]), " Plasma")) 
+plasma_labs <- c("BIOCHEMICAL", paste0(colnames(plasmaInd[2:24]), " Plasma"))
 colnames(plasmaInd) <- plasma_labs
 
-csfInd <- read_xlsx('input_files/Metabolomics/NHP CSF Metabolon.xlsx', sheet = 'ScaledImpData')
+csfInd <- read_xlsx("input_files/Metabolomics/NHP CSF Metabolon.xlsx", sheet = "ScaledImpData")
 csfInd <- csfInd[-2:-3]
-csf_labs <- c("BIOCHEMICAL", paste0(colnames(csfInd[2:22]), " CSF")) 
+csf_labs <- c("BIOCHEMICAL", paste0(colnames(csfInd[2:22]), " CSF"))
 colnames(csfInd) <- csf_labs
 
-jejunumInd <- read_xlsx('input_files/Metabolomics/NHP Jejunum Metabolon.xlsx', sheet = 'ScaledImpData')
+jejunumInd <- read_xlsx("input_files/Metabolomics/NHP Jejunum Metabolon.xlsx", sheet = "ScaledImpData")
 jejunumInd <- jejunumInd[-2:-3]
-Jej_labs <- c("BIOCHEMICAL", paste0(colnames(jejunumInd[2:22]), " Jejunum")) 
+Jej_labs <- c("BIOCHEMICAL", paste0(colnames(jejunumInd[2:22]), " Jejunum"))
 colnames(jejunumInd) <- Jej_labs
 
-ileumInd <- read_xlsx('input_files/Metabolomics/NHP Ileum Metabolon.xlsx', sheet = 'ScaledImpData')
+ileumInd <- read_xlsx("input_files/Metabolomics/NHP Ileum Metabolon.xlsx", sheet = "ScaledImpData")
 ileumInd <- ileumInd[-2:-3]
-Ile_labs <- c("BIOCHEMICAL", paste0(colnames(ileumInd[2:22]), " Ileum")) 
+Ile_labs <- c("BIOCHEMICAL", paste0(colnames(ileumInd[2:22]), " Ileum"))
 colnames(ileumInd) <- Ile_labs
 
-colonInd <- read_xlsx('input_files/Metabolomics/NHP Colon Metabolon.xlsx', sheet = 'ScaledImpData')
+colonInd <- read_xlsx("input_files/Metabolomics/NHP Colon Metabolon.xlsx", sheet = "ScaledImpData")
 colonInd <- colonInd[-2:-3]
-Col_labs <- c("BIOCHEMICAL", paste0(colnames(colonInd[2:22]), " Colon")) 
+Col_labs <- c("BIOCHEMICAL", paste0(colnames(colonInd[2:22]), " Colon"))
 colnames(colonInd) <- Col_labs
 
-fecesInd <- read_xlsx('input_files/Metabolomics/NHP Feces Metabolon.xlsx', sheet = 'ScaledImpData')
-fecesInd  <-  fecesInd[-2:-3]
-Fec_labs <- c("BIOCHEMICAL", paste0(colnames(fecesInd[2:22]), " Feces")) 
+fecesInd <- read_xlsx("input_files/Metabolomics/NHP Feces Metabolon.xlsx", sheet = "ScaledImpData")
+fecesInd <- fecesInd[-2:-3]
+Fec_labs <- c("BIOCHEMICAL", paste0(colnames(fecesInd[2:22]), " Feces"))
 colnames(fecesInd) <- Fec_labs
 
 allMetabolites <- plasmaInd
@@ -44,8 +44,8 @@ samples <- colnames(allMetabolites[-1])
 allMetabolites <- t(allMetabolites)
 
 # Making First Row into Header
-colnames(allMetabolites) <- allMetabolites[1,]
-allMetabolites <- allMetabolites[-1,]
+colnames(allMetabolites) <- allMetabolites[1, ]
+allMetabolites <- allMetabolites[-1, ]
 
 # Replacing all NA's with 0
 allMetabolites[is.na(allMetabolites)] <- 0
@@ -76,42 +76,44 @@ allMet <-
   ))
 
 # Make data frame Numeric
-df <- allMet %>% 
-  as.data.frame() %>% 
+df <- allMet %>%
+  as.data.frame() %>%
   select(-tissue) %>%
   mutate_if(is.character, as.numeric) %>%
   as.matrix()
 
-#____________________________________________
+# ____________________________________________
 #                   tSNE             ----
 # ____________________________________________
 
 ## Executing the algorithm on curated data
 set.seed(42)
-tsne_out <- Rtsne(df, dims = 2, perplexity=30, verbose=TRUE, max_iter = 500)
-exeTimeTsne<- system.time(Rtsne(df, dims = 2, perplexity=30, verbose=TRUE, max_iter = 500))
-df.tsne_plot <- data.frame(x = tsne_out$Y[,1], y = tsne_out$Y[,2], col = allMet$tissue)
+tsne_out <- Rtsne(df, dims = 2, perplexity = 30, verbose = TRUE, max_iter = 500)
+exeTimeTsne <- system.time(Rtsne(df, dims = 2, perplexity = 30, verbose = TRUE, max_iter = 500))
+df.tsne_plot <- data.frame(x = tsne_out$Y[, 1], y = tsne_out$Y[, 2], col = allMet$tissue)
 
 tsne <-
   df.tsne_plot %>%
-  ggplot() + 
+  ggplot() +
   geom_point(aes(x = x, y = y, color = col)) +
   scale_color_manual("", values = tissue_colors) +
   theme_classic() +
   labs(x = "tSNE dimension 1", y = "tSNE dimension 2")
 tsne
 
-ggsave(tsne, filename = "figures/ordination/tSNE_all_tissues.svg", 
-       width = 4, height = 3)
+ggsave(tsne,
+  filename = "figures/ordination/tSNE_all_tissues.svg",
+  width = 4, height = 3
+)
 
-#____________________________________________
+# ____________________________________________
 #                   PCA             ----
 # ____________________________________________
 
 pca <- prcomp(df, center = TRUE, scale. = TRUE)
 
 df_out <- as.data.frame(pca$x)
-df_out$donor <- sapply(strsplit(as.character(row.names(df)), "_"), "[[", 1 )
+df_out$donor <- sapply(strsplit(as.character(row.names(df)), "_"), "[[", 1)
 
 pca.plot <-
   pca$x %>%
@@ -122,7 +124,7 @@ pca.plot <-
   theme_classic()
 pca.plot
 
-ggsave(pca.plot, filename = "figures/ordination/PCA_all_tissues.svg",
-       width = 4, height = 3)
-
-
+ggsave(pca.plot,
+  filename = "figures/ordination/PCA_all_tissues.svg",
+  width = 4, height = 3
+)

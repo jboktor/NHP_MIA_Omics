@@ -1,50 +1,49 @@
 
 
 
-#' Running this script will generate nearly all figures, tables, 
+#' Running this script will generate nearly all figures, tables,
 #' and statistical summaries in our analysis.
 
 
-#_______________________________________________________________________________
+# _______________________________________________________________________________
 # Load and process data ----
-#_______________________________________________________________________________
+# _______________________________________________________________________________
 
-source('src/load-data-metabolites.R')
-source('src/load-data-cytokines.R')
-source('src/load-data-behaviors.R')
+source("src/load-data-metabolites.R")
+source("src/load-data-cytokines.R")
+source("src/load-data-behaviors.R")
 
-#_______________________________________________________________________________
+# _____________________________________________________________________________
 # Exploration of metabolome profiles ----
-#_______________________________________________________________________________
+# _____________________________________________________________________________
 
-source('src/tsne_pca.R')
-source('src/summary_vis.R')
+source("src/tsne_pca.R")
+source("src/summary_vis.R")
 
-#_______________________________________________________________________________
+# _____________________________________________________________________________
 # Visualizing metabolome alterations ----
-#_______________________________________________________________________________
+# _____________________________________________________________________________
 
-source('src/volcano_plots.R')
-source('src/boxplots.R')
-source('src/metabolon_pathway_enrichment_vis.R')
+source("src/volcano_plots.R")
+source("src/boxplots.R")
+source("src/metabolon_pathway_enrichment_vis.R")
 
-#_______________________________________________________________________________
+# _____________________________________________________________________________
 # Cytokine and Behavioral Correlations ----
-#_______________________________________________________________________________
+# _____________________________________________________________________________
 
-source('src/correlations.R')
-source('src/correlation_vis.R')
+source("src/correlations.R")
+source("src/correlation_vis.R")
 
-#_______________________________________________________________________________
+# _____________________________________________________________________________
 # 16S Analyses ----
-#_______________________________________________________________________________
+# _____________________________________________________________________________
 
-source('src/16S_metadata-prep.R')
-source('src/16S_load-data.R')
-source('src/16S_diversity-analysis.R')
-source('src/16S_auroc.R')
-source('src/16S_differential-abundance.R')
-source('src/16S_differential-abundance-plots.R')
-source('src/16S_correlations.R')
-source('src/16S_correlations-plots.R')
-
+source("src/16S_metadata-prep.R")
+source("src/16S_load-data.R")
+source("src/16S_diversity-analysis.R")
+source("src/16S_auroc.R")
+source("src/16S_differential-abundance.R")
+source("src/16S_differential-abundance-plots.R")
+source("src/16S_correlations.R")
+source("src/16S_correlations-plots.R")
