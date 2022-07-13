@@ -52,46 +52,39 @@ feces_cyt_cors <-
 
 plasma_cyt_cors.plot <- corr_heatmap_facet_v2(plasma_cyt_cors, facet_ord = cyt_tissues)
 ggsave(plasma_cyt_cors.plot,
-  filename = "figures/correlations/2022-07-05_heatmap_Plasma_allmets_allcytokines.svg",
+  filename = "figures/correlations/2022-07-05_heatmap_Plasma_allmets_allcytokines.pdf",
   width = 25, height = 5
 )
 plasma_cyt_cors.plot <- corr_heatmap_facet_v2(plasma_cyt_cors, facet_ord = cyt_tissues)
 ggsave(plasma_cyt_cors.plot,
-  filename = "figures/correlations/2022-07-05_heatmap_Plasma_allmets_allcytokines.svg",
+  filename = "figures/correlations/2022-07-05_heatmap_Plasma_allmets_allcytokines.pdf",
   width = 25, height = 5
 )
 csf_cyt_cors.plot <- corr_heatmap_facet_v2(csf_cyt_cors, facet_ord = cyt_tissues)
 ggsave(csf_cyt_cors.plot,
-  filename = "figures/correlations/2022-07-05_heatmap_CSF_allmets_allcytokines.svg",
+  filename = "figures/correlations/2022-07-05_heatmap_CSF_allmets_allcytokines.pdf",
   width = 25, height = 4
 )
 GI_cyt_cors.plot <- corr_heatmap_facet_v2(GI_cyt_cors, facet_ord = cyt_tissues)
 ggsave(GI_cyt_cors.plot,
-  filename = "figures/correlations/2022-07-05_heatmap_GI_allmets_allcytokines.svg",
+  filename = "figures/correlations/2022-07-05_heatmap_GI_allmets_allcytokines.pdf",
   width = 25, height = 6
 )
 feces_cyt_cors.plot <- corr_heatmap_facet_v2(feces_cyt_cors, facet_ord = cyt_tissues)
 ggsave(feces_cyt_cors.plot,
-  filename = "figures/correlations/2022-07-05_heatmap_Feces_allmets_allcytokines.svg",
+  filename = "figures/correlations/2022-07-05_heatmap_Feces_allmets_allcytokines.pdf",
   width = 25, height = 6
 )
 
 # _______________________________________________________________________________
 #                          Correlation Scatterplots                        ----
 # _______________________________________________________________________________
-# load("input_files/scaled_&_imputed_abundance.RData")
-# load("input_files/Behavior_Immune_data/cytokine_profiles_all_tissues_no_stimulant.rds")
-# readRDS('data/cytokines/2022-07-05_cytokine-profiles_imputed.rds')
 
 df_all <- readRDS("data/metabolomics/2022-07-05_scaled_imputed_abundance.rds")
 behavior_data <- readRDS("data/behaviors/2022-07-05_behaviors.rds")
 cytokine_data <- readRDS("data/cytokines/2022-07-05_cytokine-profiles_imputed.rds")
-
-# TODO will probably need to pivot cytokine_data into long format
-
 keys2join <- read_xlsx("input_files/misc/sample_keys.xlsx", sheet = "keys") %>%
-  select(SampleID, group, treatment) %>%
-  column_to_rownames(var = "SampleID")
+  select(SampleID, group, treatment)
 
 ## Cytokine scatterplot loop ----
 # Selects top 5 most significant associations per tissue source (of mets)
@@ -104,62 +97,72 @@ cytokine_hits <-
 
 cytokine_hits_sametissue <-
   cytokine_cors %>%
-  filter(tissue_A == tissue_B) %>%
+  mutate(temp_tissue_A = gsub('-PBMCs', '', tissue_A)) %>% 
+  filter(temp_tissue_A == tissue_B) %>%
+  select(-temp_tissue_A) %>% 
   filter(q < 0.25) %>%
   filter(n > 15) %>%
   group_by(tissue_B) %>%
   slice_min(order_by = q, n = 5)
 
-cytokine_data <-
-  cbind(
-    cytokine_profiles_noStim$GI_cytokines,
-    cytokine_profiles_noStim$Brain_cytokines %>%
-      clean.cols.y4() %>%
-      clean.cols.upper(),
-    cytokine_profiles_noStim$Plasma_cytokines %>%
-      clean.cols.y4() %>%
-      clean.cols.upper()
-  )
-merged_cyt_data <- cbind(keys2join, df_all, cytokine_data)
+cytokine_data_wide <-
+  cytokine_data %>% 
+  pivot_wider(names_from = c('cytokine', 'Tissue'), names_sep = '__')
 
+merged_cyt_data <- 
+  df_all %>% 
+  rownames_to_column(var = 'SampleID') %>% 
+  left_join(keys2join) %>% 
+  left_join(cytokine_data_wide) %>% 
+  column_to_rownames(var = 'SampleID')
 
 top_n_scatterplots(
   merged_data = merged_cyt_data,
   hitslist = cytokine_hits,
-  data_type = "PBMC_profile_"
+  data_type = "PBMC_profile_", 
+  folder_prefix = 'figures/correlations/scatterplots_2022-07-09/'
 )
 
 top_n_scatterplots(
   merged_data = merged_cyt_data,
   hitslist = cytokine_hits_sametissue,
   data_type = "PBMC_profile_",
-  folder_prefix = "figures/correlations/scatterplots_tissue_specific/"
+  folder_prefix = "figures/correlations/scatterplots_tissue-specific_2022-07-09/"
 )
 
 
-# TO MANUALLY CHECK SPECIFIC CORRELATIONS:
-cytokine_hits_manual <-
-  cytokine_cors %>%
-  filter(tissue_B == "Ileum") %>%
-  filter(feature_A == "HIPP_IL5") %>%
-  filter(q <= 0.2)
-
-top_n_scatterplots(
-  merged_data = merged_cyt_data,
-  hitslist = cytokine_hits_manual,
-  data_type = "PBMC_profile_",
-  folder_prefix = "figures/correlations/manual_scatterplots/"
-)
-
+# # TO MANUALLY CHECK SPECIFIC CORRELATIONS:
+# cytokine_hits_manual <-
+#   cytokine_cors %>%
+#   filter(tissue_B == "Ileum") %>%
+#   filter(feature_A == "HIPP_IL5") %>%
+#   filter(q <= 0.2)
+# 
+# top_n_scatterplots(
+#   merged_data = merged_cyt_data,
+#   hitslist = cytokine_hits_manual,
+#   data_type = "PBMC_profile_",
+#   folder_prefix = "figures/correlations/manual_scatterplots/"
+# )
 
 ## Behavior scatterplot loop ----
 behavior_hits <-
   behavior_all_mets_fdr %>%
-  # filter(q < 0.25) %>%
+  filter(q < 0.25) %>%
   group_by(tissue_B) %>%
   slice_min(order_by = q, n = 5)
 
-merged_behav_data <- cbind(keys2join, df_all, behavior_data$df_behavior)
+df_behavior <- 
+  behavior_data$df_behavior %>% 
+  rownames_to_column(var = 'SampleID')
+
+merged_behav_data <- 
+  df_all %>% 
+  rownames_to_column(var = 'SampleID') %>% 
+  left_join(keys2join) %>% 
+  left_join(df_behavior) %>% 
+  column_to_rownames(var = 'SampleID')
+
 top_n_scatterplots(
   merged_data = merged_behav_data,
   hitslist = behavior_hits,
@@ -174,74 +177,6 @@ cytokine_cors_mapped <- cytokine_cors %>%
   dplyr::rename("BIOCHEMICAL" = "feature_B_obj") %>%
   left_join(pathway_map, by = "BIOCHEMICAL") %>%
   janitor::clean_names()
-
-corr_count_sup <-
-  cytokine_cors_mapped %>%
-  filter(q < 0.25) %>%
-  dplyr::group_by(feature_a_obj, super_pathway, tissue_b) %>%
-  dplyr::summarise(n = n()) %>%
-  arrange(desc(n))
-corr_count_sub <-
-  cytokine_cors_mapped %>%
-  filter(q < 0.25) %>%
-  dplyr::group_by(feature_a_obj, sub_pathway, tissue_b) %>%
-  dplyr::summarise(n = n()) %>%
-  arrange(desc(n))
-
-level_order_sup <-
-  corr_count_sup %>%
-  group_by(super_pathway) %>%
-  dplyr::summarise(n = n()) %>%
-  arrange(n) %>%
-  select(super_pathway) %>%
-  unlist(use.names = F)
-
-cytokine_colors <-
-  colorRampPalette(colormash)(length(base::unique(
-    corr_count_sub$feature_a_obj
-  )))
-names(cytokine_colors) <- unique(
-  corr_count_sub$feature_a_obj
-)
-
-# Count figure - Superpathways
-supcount <-
-  corr_count_sup %>%
-  ggplot(aes(x = n, y = fct_relevel(super_pathway, level_order), fill = feature_a_obj)) +
-  geom_col(width = 0.5) +
-  scale_fill_manual(values = cytokine_colors) +
-  facet_wrap(~tissue_b, nrow = 1) +
-  labs(
-    x = "Count of Spearman's Correlation Associations (q<0.25)",
-    y = NULL, fill = NULL
-  ) +
-  my_clean_theme()
-
-ggsave(supcount,
-  filename = glue("{path_enrich_loc}/2022-07-05_superpathway_cytokine_summary.png"),
-  width = 9, height = 4
-)
-
-
-# Count figure - Subpathways
-subcount <-
-  corr_count_sub %>%
-  left_join(pathway_map_sub2sup, by = "sub_pathway") %>%
-  ggplot(aes(x = n, y = fct_relevel(sub_pathway, level_order), fill = feature_a_obj)) +
-  geom_col(width = 0.5) +
-  scale_fill_manual(values = cytokine_colors) +
-  facet_grid(super_pathway ~ tissue_b, scales = "free_y", space = "free") +
-  labs(
-    x = "Count of Spearman's Correlation Associations (q<0.25)",
-    y = NULL, fill = NULL
-  ) +
-  my_clean_theme()
-
-ggsave(subcount,
-  filename = glue("{path_enrich_loc}/2022-07-05_subpathway_cytokine_summary.png"),
-  width = 12, height = 12
-)
-
 
 # _______________________________________________________________________________
 #                    Pathway Enrichment Analysis            ----
@@ -312,25 +247,12 @@ ggsave(subcount,
 
 # saveRDS(cor_enrichment_df, file = 'data/cytokines/2022-07-08_cytokine-metabolite-corr-pathway-enrichment.rds')
 # write.xlsx(cor_enrichment_df,
-#            file = 'data/correlations_cytokine_metabolite/2022-07-08_cytokine_correlation_pathway-enrichment-analysis.xlsx')
+#            file = 'data/correlations/cytokine-to-metabolite/2022-07-08_cytokine_correlation_pathway-enrichment-analysis.xlsx')
 
 cor_enrichment_df <- readRDS(
   file = "data/cytokines/2022-07-08_cytokine-metabolite-corr-pathway-enrichment.rds"
 )
 
-## Enrichment plots ----
-enrichment_df_trim <- cor_enrichment_df %>%
-  filter(k > 0) %>%
-  filter(n > 2) %>%
-  filter(enrichment < 0.05)
-enrichment_df_nonsig <-
-  cor_enrichment_df %>%
-  filter(enrichment > 0.05)
-enrichment_df_labels <-
-  enrichment_df_trim %>%
-  group_by(metabolite_origin) %>%
-  slice_min(order_by = m / k, n = 5) %>%
-  slice_min(order_by = enrichment, n = 5)
 
 
 ## Tissue Specific bubble plot ----
@@ -429,53 +351,58 @@ feces_bubble <-
 path_enrich_loc <- c("figures/correlations/pathway_enrichment")
 
 ggsave(plasma_bubble,
-  filename = glue("{path_enrich_loc}/2022-07-05_bubble_plot_Plasma.svg"),
+  filename = glue("{path_enrich_loc}/2022-07-05_bubble_plot_Plasma.pdf"),
   width = 6.5, height = 5.75
 )
 ggsave(csf_bubble,
-  filename = glue("{path_enrich_loc}/022-07-05_bubble_plot_CSF.svg"),
+  filename = glue("{path_enrich_loc}/022-07-05_bubble_plot_CSF.pdf"),
   width = 5.4, height = 5.75
 )
 ggsave(ileum_bubble,
-  filename = glue("{path_enrich_loc}/022-07-05_bubble_plot_Ileum.svg"),
+  filename = glue("{path_enrich_loc}/022-07-05_bubble_plot_Ileum.pdf"),
   width = 6.25, height = 5.75
 )
 ggsave(jejunum_bubble,
-  filename = glue("{path_enrich_loc}/022-07-05_bubble_plot_Jejunum.svg"),
+  filename = glue("{path_enrich_loc}/022-07-05_bubble_plot_Jejunum.pdf"),
   width = 6.25, height = 5.75
 )
 ggsave(colon_bubble,
-  filename = glue("{path_enrich_loc}/022-07-05_bubble_plot_Colon.svg"),
+  filename = glue("{path_enrich_loc}/022-07-05_bubble_plot_Colon.pdf"),
   width = 6, height = 5.75
 )
 ggsave(feces_bubble,
-  filename = glue("{path_enrich_loc}/022-07-05_bubble_plot_Feces.svg"),
+  filename = glue("{path_enrich_loc}/022-07-05_bubble_plot_Feces.pdf"),
   width = 6, height = 5.75
 )
 
 
 
 ## figure - Superpathway enrichment barplots ----
-sup_enrichment <-
-  cor_enrichment_df %>%
-  filter(k > 0) %>%
-  filter(n > 2) %>%
-  ggplot(aes(x = -log10(enrichment), y = fct_relevel(super_pathway, level_order), fill = cytokine)) +
-  geom_col(width = 0.5) +
-  scale_fill_manual(values = cytokine_colors) +
-  facet_wrap(~metabolite_origin, nrow = 1) +
-  labs(
-    x = expression(paste(-log[10], "[ Enrichment Statistic ]")),
-    y = NULL, fill = NULL
-  ) +
-  my_clean_theme()
+corr_count_sup <- 
+  cytokine_cors_mapped %>% 
+  filter(q < 0.25) %>%
+  dplyr::group_by(feature_a_obj, super_pathway, tissue_b) %>%
+  dplyr::summarise(n = n()) %>%
+  arrange(desc(n))
+corr_count_sub <- 
+  cytokine_cors_mapped %>% 
+  filter(q < 0.25) %>%
+  dplyr::group_by(feature_a_obj, sub_pathway, tissue_b) %>%
+  dplyr::summarise(n = n()) %>%
+  arrange(desc(n))
 
-ggsave(sup_enrichment,
-  filename =
-    glue("{path_enrich_loc}/2022-07-05_superpathway_cytokine_enrichment_summary.png"),
-  width = 9, height = 4
-)
+level_order_ <- 
+  corr_count_sup %>% 
+  group_by(super_pathway) %>% 
+  dplyr::summarise(n = n()) %>%
+  arrange(n) %>% 
+  select(super_pathway) %>% unlist(use.names = F)
 
+cytokine_colors <- 
+  colorRampPalette(colormash)(length(base::unique(
+    corr_count_sub$feature_a_obj)))
+names(cytokine_colors) <- unique(
+  corr_count_sub$feature_a_obj)
 
 ## figure - Subpathways enrichment barplots ----
 sub_enrichment <-
@@ -483,7 +410,10 @@ sub_enrichment <-
   filter(super_pathway != "Partially Characterized Molecules") %>%
   filter(k > 0) %>%
   filter(n > 2) %>%
-  ggplot(aes(x = -log10(enrichment), y = fct_relevel(sub_pathway, level_order), fill = cytokine)) +
+  ggplot(aes(x = -log10(enrichment), 
+             y = sub_pathway, 
+             fill = cytokine)
+         ) +
   geom_col(width = 0.5) +
   scale_fill_manual(values = cytokine_colors) +
   facet_grid(super_pathway ~ metabolite_origin, scales = "free_y", space = "free") +
@@ -495,10 +425,9 @@ sub_enrichment <-
   theme(strip.text.y.right = element_text(angle = 0))
 
 ggsave(sub_enrichment,
-  filename = glue("{path_enrich_loc}/2022-07-05_subpathway_cytokine_enrichment_summary_new.svg"),
+  filename = glue("{path_enrich_loc}/2022-07-05_subpathway_cytokine_enrichment_summary_new.pdf"),
   width = 12, height = 12
 )
-
 
 
 tissue_enrichment_subpaths <- function(df, tissue) {
@@ -520,45 +449,45 @@ tissue_enrichment_subpaths <- function(df, tissue) {
 }
 
 
-plasma_subpath_enriched <-
-  tissue_enrichment_subpaths(df = cor_enrichment_df, tissue = "Plasma")
-
-csf_subpath_enriched <-
-  tissue_enrichment_subpaths(df = cor_enrichment_df, tissue = "CSF")
-
-jejunum_subpath_enriched <-
-  tissue_enrichment_subpaths(df = cor_enrichment_df, tissue = "Jejunum")
-
-ileum_subpath_enriched <-
-  tissue_enrichment_subpaths(df = cor_enrichment_df, tissue = "Ileum")
-
-colon_subpath_enriched <-
-  tissue_enrichment_subpaths(df = cor_enrichment_df, tissue = "Colon")
-
-feces_subpath_enriched <-
-  tissue_enrichment_subpaths(df = cor_enrichment_df, tissue = "Feces")
-
-ggsave(plasma_subpath_enriched,
-  filename = glue("{path_enrich_loc}/2022-07-05_subpath_barplot_Plasma.svg"),
-  width = 7, height = 3
-)
-ggsave(csf_subpath_enriched,
-  filename = glue("{path_enrich_loc}/2022-07-05_subpath_barplot_CSF.svg"),
-  width = 7, height = 1.5
-)
-ggsave(jejunum_subpath_enriched,
-  filename = glue("{path_enrich_loc}/2022-07-05_subpath_barplot_Jejunum.svg"),
-  width = 7, height = 7
-)
-ggsave(ileum_subpath_enriched,
-  filename = glue("{path_enrich_loc}/2022-07-05_subpath_barplot_Ileum.svg"),
-  width = 7, height = 9
-)
-ggsave(colon_subpath_enriched,
-  filename = glue("{path_enrich_loc}/2022-07-05_subpath_barplot_Colon.svg"),
-  width = 7, height = 2.5
-)
-ggsave(feces_subpath_enriched,
-  filename = glue("{path_enrich_loc}/2022-07-05_subpath_barplot_Feces.svg"),
-  width = 7, height = 4
-)
+# plasma_subpath_enriched <-
+#   tissue_enrichment_subpaths(df = cor_enrichment_df, tissue = "Plasma")
+# 
+# csf_subpath_enriched <-
+#   tissue_enrichment_subpaths(df = cor_enrichment_df, tissue = "CSF")
+# 
+# jejunum_subpath_enriched <-
+#   tissue_enrichment_subpaths(df = cor_enrichment_df, tissue = "Jejunum")
+# 
+# ileum_subpath_enriched <-
+#   tissue_enrichment_subpaths(df = cor_enrichment_df, tissue = "Ileum")
+# 
+# colon_subpath_enriched <-
+#   tissue_enrichment_subpaths(df = cor_enrichment_df, tissue = "Colon")
+# 
+# feces_subpath_enriched <-
+#   tissue_enrichment_subpaths(df = cor_enrichment_df, tissue = "Feces")
+# 
+# ggsave(plasma_subpath_enriched,
+#   filename = glue("{path_enrich_loc}/2022-07-05_subpath_barplot_Plasma.pdf"),
+#   width = 7, height = 3
+# )
+# ggsave(csf_subpath_enriched,
+#   filename = glue("{path_enrich_loc}/2022-07-05_subpath_barplot_CSF.pdf"),
+#   width = 7, height = 1.5
+# )
+# ggsave(jejunum_subpath_enriched,
+#   filename = glue("{path_enrich_loc}/2022-07-05_subpath_barplot_Jejunum.pdf"),
+#   width = 7, height = 7
+# )
+# ggsave(ileum_subpath_enriched,
+#   filename = glue("{path_enrich_loc}/2022-07-05_subpath_barplot_Ileum.pdf"),
+#   width = 7, height = 9
+# )
+# ggsave(colon_subpath_enriched,
+#   filename = glue("{path_enrich_loc}/2022-07-05_subpath_barplot_Colon.pdf"),
+#   width = 7, height = 2.5
+# )
+# ggsave(feces_subpath_enriched,
+#   filename = glue("{path_enrich_loc}/2022-07-05_subpath_barplot_Feces.pdf"),
+#   width = 7, height = 4
+# )

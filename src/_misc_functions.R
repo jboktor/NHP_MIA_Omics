@@ -743,7 +743,7 @@ corr_FDR_16S_cyt <- function(df) {
     group_by(feature_A) %>%
     mutate(q = p.adjust(p, method = "BH")) %>%
     ungroup() %>%
-    separate(feature_B, c("feature_B_obj", "tissue_B"), sep = "__", remove = F) %>%
+    # separate(feature_B, c("feature_B_obj", "tissue_B"), sep = "__", remove = F) %>%
     separate(object_name, c("correlation_objects", "condition", "tissue"), sep = "__", remove = F)
 }
 
@@ -815,7 +815,9 @@ corr_scatter_plot <- function(df.plot, corr_obj, feature_var, metadata_var,
   figurename <- paste0(stat_col$feature_A[[1]], " vs ", stat_col$feature_B[[1]]) %>%
     str_replace_all("[[:punct:]]", " ")
   if (subdir) {
-    plot.name <- paste0(folder_prefix, stat_col$tissue_B, "/", data_type, figurename, ".svg")
+    subdir_folder <- paste0(folder_prefix, stat_col$tissue_B, "/")
+    dir.create(file.path(subdir_folder), showWarnings = FALSE)
+    plot.name <- paste0(subdir_folder, data_type, figurename, ".svg")
   } else {
     plot.name <- paste0(folder_prefix, "/", data_type, figurename, ".svg")
   }

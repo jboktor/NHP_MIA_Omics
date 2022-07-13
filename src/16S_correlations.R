@@ -15,6 +15,9 @@ df_all <- readRDS(file = "input_files/Metabolomics/scaled_&_imputed_abundance.rd
 behaviors <- readRDS(file = "input_files/Behavior_Immune_data/behaviors.rds")
 # Load GI cytokine data
 gi_cytokines <- readRDS("input_files/Behavior_Immune_data/GI_cytokines_all.rds")
+# Read trimmed and imputed cytokine profiles
+all_cytokines_trimmed_imputed <-
+  readRDS(file = "data/cytokines/2022-07-05_cytokine-profiles_imputed.rds")
 
 
 # Prep 16S abundance data
@@ -43,15 +46,35 @@ ileum_mets <- df_all %>%
 colon_cytokines <- list()
 jejunum_cytokines <- list()
 ileum_cytokines <- list()
-for (condition in names(gi_cytokines)) {
-  print(condition)
-  colon_cytokines[[condition]] <- gi_cytokines[[condition]] %>%
-    select(contains("__colon"))
-  jejunum_cytokines[[condition]] <- gi_cytokines[[condition]] %>%
-    select(contains("__Jejunum"))
-  ileum_cytokines[[condition]] <- gi_cytokines[[condition]] %>%
-    select(contains("__Ileum"))
-}
+
+colon_cytokines[['Media']] <- all_cytokines_trimmed_imputed %>% 
+  filter(grepl('Colon', Tissue)) %>% 
+  pivot_wider(names_from = 'cytokine') %>% 
+  select(-c(Animal, Tissue)) %>% 
+  arrange(match(SampleID, rownames(df_all))) %>% 
+  column_to_rownames(var = 'SampleID')
+jejunum_cytokines[['Media']] <- all_cytokines_trimmed_imputed %>% 
+  filter(grepl('Jejunum', Tissue)) %>% 
+  pivot_wider(names_from = 'cytokine') %>% 
+  select(-c(Animal, Tissue)) %>% 
+  arrange(match(SampleID, rownames(df_all))) %>% 
+  column_to_rownames(var = 'SampleID')
+ileum_cytokines[['Media']] <- all_cytokines_trimmed_imputed %>% 
+  filter(grepl('Ileum', Tissue)) %>% 
+  pivot_wider(names_from = 'cytokine') %>% 
+  select(-c(Animal, Tissue)) %>% 
+  arrange(match(SampleID, rownames(df_all))) %>% 
+  column_to_rownames(var = 'SampleID')
+
+# for (condition in names(gi_cytokines)) {
+#   print(condition)
+#   colon_cytokines[[condition]] <- gi_cytokines[[condition]] %>%
+#     select(contains("__colon"))
+#   jejunum_cytokines[[condition]] <- gi_cytokines[[condition]] %>%
+#     select(contains("__Jejunum"))
+#   ileum_cytokines[[condition]] <- gi_cytokines[[condition]] %>%
+#     select(contains("__Ileum"))
+# }
 
 # Select NHPs with paired 16S and metabolome samples and make row-order identical
 stool_mets_input <- stool_mets[rownames(ps_df_stool), ]
@@ -69,22 +92,38 @@ colon_cyt_input <- list()
 jejunum_cyt_input <- list()
 ileum_cyt_input <- list()
 
-for (condition in names(gi_cytokines)) {
-  colon_cyt_input[[condition]] <- colon_cytokines[[condition]][rownames(ps_df_stool), ]
-  cat("Checking that sample ids are aligned: ", all(rownames(ps_df_stool) == rownames(colon_cyt_input[[condition]])), "\n")
-  jejunum_cyt_input[[condition]] <- jejunum_cytokines[[condition]][rownames(ps_df_jej), ]
-  cat("Checking that sample ids are aligned: ", all(rownames(ps_df_jej) == rownames(jejunum_cyt_input[[condition]])), "\n")
-  ileum_cyt_input[[condition]] <- ileum_cytokines[[condition]][rownames(ps_df_ile), ]
-  cat("Checking that sample ids are aligned: ", all(rownames(ps_df_ile) == rownames(ileum_cyt_input[[condition]])), "\n")
+for (condition in c('Media')) {
+  colon_cyt_input[[condition]] <-
+    colon_cytokines[[condition]][rownames(ps_df_stool),]
+  
+  cat("Checking that sample ids are aligned: ",
+      all(rownames(ps_df_stool) == rownames(colon_cyt_input[[condition]]) ),
+      "\n")
+  
+  jejunum_cyt_input[[condition]] <-
+    jejunum_cytokines[[condition]][rownames(ps_df_jej),]
+  cat("Checking that sample ids are aligned: ",
+      all(rownames(ps_df_jej) == rownames(jejunum_cyt_input[[condition]])),
+      "\n")
+  
+  ileum_cyt_input[[condition]] <-
+    ileum_cytokines[[condition]][rownames(ps_df_ile),]
+  cat("Checking that sample ids are aligned: ",
+      all(rownames(ps_df_ile) == rownames(ileum_cyt_input[[condition]])),
+      "\n")
 }
 
 
 # _______________________________________________________________________________
 
+
 # microbe metabolite correlations ----
-microbe_mets_stool <- corr_loop_parallel(ps_df_stool, stool_mets_input, obj.name = "16S_Metabolome__Stool")
-microbe_mets_jejunum <- corr_loop_parallel(ps_df_jej, jejunum_mets_input, obj.name = "16S_Metabolome__Jejunum")
-microbe_mets_ileum <- corr_loop_parallel(ps_df_ile, ileum_mets_input, obj.name = "16S_Metabolome__Ileum")
+microbe_mets_stool <-
+  corr_loop_parallel(ps_df_stool, stool_mets_input, obj.name = "16S_Metabolome__Stool")
+microbe_mets_jejunum <-
+  corr_loop_parallel(ps_df_jej, jejunum_mets_input, obj.name = "16S_Metabolome__Jejunum")
+microbe_mets_ileum <-
+  corr_loop_parallel(ps_df_ile, ileum_mets_input, obj.name = "16S_Metabolome__Ileum")
 
 microbe_metabolite_cors <-
   bind_rows(
@@ -92,11 +131,11 @@ microbe_metabolite_cors <-
     microbe_mets_jejunum %>% corr_FDR_16S(),
     microbe_mets_ileum %>% corr_FDR_16S()
   )
-saveRDS(microbe_metabolite_cors, file = "data/correlations/microbe-to-metabolite/Microbe_Metabolite_Correlations.rds")
+saveRDS(microbe_metabolite_cors,
+        file = "data/correlations/microbe-to-metabolite/Microbe_Metabolite_Correlations.rds")
 write.xlsx(microbe_metabolite_cors,
-  file = "data/correlations/microbe-to-metabolite/Microbe_Metabolite_Correlations.xlsx",
-  overwrite = T
-)
+           file = "data/correlations/microbe-to-metabolite/Microbe_Metabolite_Correlations.xlsx",
+           overwrite = T)
 
 # microbe cytokine correlations ----
 microbe_cyt_stool <- list()
@@ -107,7 +146,7 @@ pb <- progress_bar$new(
   format = "  Calculating Correlations [:bar] :current/:total :percent in :elapsed eta::eta",
   total = iterlength, clear = FALSE, width = 90
 )
-for (condition in names(gi_cytokines)) {
+for (condition in c('Media')) {
   pb$tick()
   microbe_cyt_stool[[condition]] <-
     corr_loop_parallel(ps_df_stool, colon_cyt_input[[condition]],
@@ -124,9 +163,12 @@ for (condition in names(gi_cytokines)) {
 }
 
 # add q-value and collapse lists
-microbe_cyt_stool_df <- map(microbe_cyt_stool, corr_FDR_16S_cyt) %>% map_df(as.data.frame)
-microbe_cyt_jejunum_df <- map(microbe_cyt_jejunum, corr_FDR_16S_cyt) %>% map_df(as.data.frame)
-microbe_cyt_ileum_df <- map(microbe_cyt_ileum, corr_FDR_16S_cyt) %>% map_df(as.data.frame)
+microbe_cyt_stool_df <-
+  map(microbe_cyt_stool, corr_FDR_16S_cyt) %>% map_df(as.data.frame)
+microbe_cyt_jejunum_df <-
+  map(microbe_cyt_jejunum, corr_FDR_16S_cyt) %>% map_df(as.data.frame)
+microbe_cyt_ileum_df <-
+  map(microbe_cyt_ileum, corr_FDR_16S_cyt) %>% map_df(as.data.frame)
 
 microbe_cytokine_cors <-
   bind_rows(
@@ -134,8 +176,8 @@ microbe_cytokine_cors <-
     microbe_cyt_jejunum_df,
     microbe_cyt_ileum_df
   )
-saveRDS(microbe_cytokine_cors, file = "data/correlations/microbe-to-metabolite/Microbe_Cytokine_Correlations.rds")
+saveRDS(microbe_cytokine_cors,
+        file = "data/correlations/microbe-to-cytokine/Microbe_Cytokine_Correlations.rds")
 write.xlsx(microbe_cytokine_cors,
-  file = "data/correlations/microbe-to-metabolite/Microbe_Cytokine_Correlations.xlsx",
-  overwrite = T
-)
+           file = "data/correlations/microbe-to-cytokine/2022-07-11_Microbe-Cytokine_Correlations.xlsx",
+           overwrite = T)

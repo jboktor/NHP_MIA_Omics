@@ -74,8 +74,28 @@ write.xlsx(
   ),
   overwrite = TRUE
 )
+
 saveRDS(cytokine_corrs_FDR,
   file = glue("{cyt_to_mets}/2022-07-06_cytokine-metabolite_correlations.rds")
+)
+
+cytokine_corrs_excel_out <- list()
+cytokine_corrs_excel_out[['Plasma_cytokine_corrs']] <-
+  cytokine_corrs_FDR %>%
+  filter(tissue_A %in% c("Plasma", "Plasma-PBMCs"))
+cytokine_corrs_excel_out[['Brain_cytokine_corrs']] <-
+  cytokine_corrs_FDR %>%
+  filter(tissue_A %in% c("CSF", "Cortex", "HIPP", "AC"))
+cytokine_corrs_excel_out[['GI_cytokine_corrs']] <-
+  cytokine_corrs_FDR %>%
+  filter(tissue_A %in% c("Colon-PBMCs", "Ileum-PBMCs", "Jejunum-PBMCs", "MLN-PBMCs"))
+
+write.xlsx(
+  cytokine_corrs_excel_out,
+  glue(
+    "{cyt_to_mets}/2022-07-06_cytokine-metabolite_correlations_by_tissue.xlsx"
+  ),
+  overwrite = TRUE
 )
 
 # _______________________________________________________________________________

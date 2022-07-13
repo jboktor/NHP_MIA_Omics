@@ -8,7 +8,7 @@ source("src/_16S_functions.R")
 
 
 # Load microbe cytokine correlations
-microbe_cytokine_cors <- readRDS(file = "data/correlations/microbe-to-metabolite/Microbe_Cytokine_Correlations.rds")
+microbe_cytokine_cors <- readRDS(file = "data/correlations/microbe-to-cytokine/Microbe_Cytokine_Correlations.rds")
 # Load microbe metabolite correlations
 microbe_metabolite_cors <- readRDS(file = "data/correlations/microbe-to-metabolite/Microbe_Metabolite_Correlations.rds")
 # Load metabolome data
